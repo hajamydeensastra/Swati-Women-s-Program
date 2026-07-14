@@ -12,7 +12,6 @@ const SYSTEM_SCHEMA = {
   MASTER_CLASSES: ["ClassID", "ClassName", "CourseCode", "Department", "RecordID"],
   MASTER_SUBJECTS: ["SubjectCode", "SubjectName", "CourseCode", "Department", "RecordID"],
   MASTER_STAFFS: ["StaffID", "StaffName", "Department", "Contact", "RecordID"],
-  // REGISTERING NEW SCHEMA TABLE FOR ALLOCATING SUBJECTS TO STAFF members
   MASTER_ALLOCATIONS: ["StaffID", "ClassID", "SubjectCode", "RecordID"],
   MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "Status", "DOB", "Age", "PrimaryContact", "SecondaryContact", "Std10th", "Std12th", "Accommodation", "HostelName", "RoomNo", "Address", "PhotoURL", "RecordID"],
   CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "RecordID"], 
@@ -39,6 +38,12 @@ window.addEventListener("DOMContentLoaded", () => {
   initializeLocalDatabases();
   setupGlobalEvents();
   autoLoginIfSessionExists();
+  
+  // Set today's date on date picker as default
+  const datePicker = document.getElementById("att-date-picker");
+  if (datePicker && !datePicker.value) {
+    datePicker.value = new Date().toISOString().split('T')[0];
+  }
 });
 
 function initializeLocalDatabases() {
@@ -145,6 +150,8 @@ function syncAllFromGoogleSheets() {
       refreshFormDropdownLists();
       if(activeUserSession.role === "STUDENT") {
         renderStudentSelfProfileViewer();
+      } else if (activeUserSession.role === "STAFF") {
+        renderStaffDashboardConsole();
       }
       alert("System database successfully synchronized and refreshed!");
     })
@@ -187,7 +194,7 @@ function sheetTabForKey(key, optionalRowData = null) {
     MASTER_CLASSES: "Master_Classes",
     MASTER_SUBJECTS: "Master_Subjects",
     MASTER_STAFFS: "Master_Staffs",
-    MASTER_ALLOCATIONS: "Master_Allocations", // Google Sheet tab name for allocations
+    MASTER_ALLOCATIONS: "Master_Allocations", 
     MASTER_STUDENTS: "Master_Students",
     CLASS_TIMETABLES: "Class_Timetables",
     DAILY_ATTENDANCE: "Daily_Class_Attendance"
@@ -240,18 +247,19 @@ function applyAuthorizationRules(role, name) {
 
   if (role === "ADMIN") {
     adminMenuOpts.forEach(el => el.style.display = "flex");
-    staffMenuOpts.forEach(el => el.style.display = "flex");
+    staffMenuOpts.forEach(el => el.style.display = "none"); // Admin has admin tabs
     document.getElementById("student-menu-profile").style.display = "none";
-    if (adminAttType) adminAttType.style.display = "flex"; // Admin controls event/internship
+    if (adminAttType) adminAttType.style.display = "flex"; 
     document.getElementById("mode-flag-badge").innerText = "ADMINISTRATION INSTANCE";
     triggerNavigationTabChange("dashboard-section");
   } else if (role === "STAFF") {
     adminMenuOpts.forEach(el => el.style.display = "none");
-    staffMenuOpts.forEach(el => el.style.display = "flex");
+    staffMenuOpts.forEach(el => el.style.display = "flex"); // Staff dashboard and Attendance Entry tabs
     document.getElementById("student-menu-profile").style.display = "none";
-    if (adminAttType) adminAttType.style.display = "none"; // Hide event/internship from staff
+    if (adminAttType) adminAttType.style.display = "none"; 
     document.getElementById("mode-flag-badge").innerText = "FACULTY PORTAL";
-    triggerNavigationTabChange("staff-attendance-section");
+    renderStaffDashboardConsole();
+    triggerNavigationTabChange("staff-dashboard-section");
   } else if (role === "STUDENT") {
     adminMenuOpts.forEach(el => el.style.display = "none");
     staffMenuOpts.forEach(el => el.style.display = "none");
@@ -300,10 +308,8 @@ function refreshFormDropdownLists() {
   populateSelectControl("std-class-select", classList, 0, 1);
   populateSelectControl("tt-class-select", classList, 0, 1);
   populateSelectControl("att-class-select", classList, 0, 1);
-  populateSelectControl("att-subject-select", subjectList, 0, 1);
 
-  // New Subject Allocation dynamic bindings
-  populateSelectControl("alloc-staff-select", staffList, 1, 0); // Maps staff name/ID
+  populateSelectControl("alloc-staff-select", staffList, 1, 0); 
   populateSelectControl("alloc-class-select", classList, 0, 1);
   populateSelectControl("alloc-sub-select", subjectList, 0, 1);
 
@@ -313,9 +319,6 @@ function refreshFormDropdownLists() {
     populateSelectControl(`tt-staff2-h${hourIdx}`, staffList, 1, 0, "CO-STAFF A (OPTIONAL)");
     populateSelectControl(`tt-staff3-h${hourIdx}`, staffList, 1, 0, "CO-STAFF B (OPTIONAL)");
   }
-
-  // Filter attendance dropdowns immediately if Staff is logged in
-  filterSubjectsByAssignedStaff();
 }
 
 function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, defaultAlternativeText = null) {
@@ -334,61 +337,6 @@ function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, 
     opt.text = `${row[valueColIndex]} - ${row[textColIndex]}`;
     selectNode.appendChild(opt);
   });
-}
-
-// Staff dynamic portal reflection helper
-function filterSubjectsByAssignedStaff() {
-  const classSelect = document.getElementById("att-class-select");
-  const subjectSelect = document.getElementById("att-subject-select");
-  if (!classSelect || !subjectSelect) return;
-
-  const selectedClass = classSelect.value;
-  const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
-  const allocationsList = JSON.parse(localStorage.getItem("MASTER_ALLOCATIONS")) || [];
-
-  // Default behavior for Admin (No filter required)
-  if (activeUserSession.role === "ADMIN") {
-    populateSelectControl("att-subject-select", subjectList, 0, 1);
-    return;
-  }
-
-  // Active Staff portal filtering logic based on Admin's Allocation ledger
-  const staffName = activeUserSession.name; 
-  if (!selectedClass) {
-    subjectSelect.innerHTML = `<option value="">-- Choose Class First --</option>`;
-    return;
-  }
-
-  // Retrieve assigned subjects allocated specifically to this staff name inside MASTER_ALLOCATIONS[cite: 12]
-  let assignedSubjectCodes = [];
-  allocationsList.forEach(row => {
-    if (row[1] === selectedClass && row[0] === staffName) {
-      assignedSubjectCodes.push(row[2]);
-    }
-  });
-
-  // Unique list of assigned subject codes
-  assignedSubjectCodes = [...new Set(assignedSubjectCodes)];
-
-  // Populate only assigned subjects for this faculty
-  const filteredSubjects = subjectList.filter(s => assignedSubjectCodes.includes(s[0]));
-  populateSelectControl("att-subject-select", filteredSubjects, 0, 1);
-
-  if (filteredSubjects.length === 0) {
-    subjectSelect.innerHTML = `<option value="">No Subjects Assigned for you in this class</option>`;
-  }
-}
-
-// Toggle subject select dropdown if Admin chooses Event / Internship Attendance
-function handleAttendanceCategoryToggle() {
-  const category = document.getElementById("att-category-select").value;
-  const subjectFieldContainer = document.getElementById("subject-field-container");
-  
-  if (category === "EVENT" || category === "INTERNSHIP") {
-    if (subjectFieldContainer) subjectFieldContainer.style.display = "none";
-  } else {
-    if (subjectFieldContainer) subjectFieldContainer.style.display = "flex";
-  }
 }
 
 // 8. CRUD SAVE GATEWAY & VALIDATION
@@ -667,25 +615,296 @@ function createHeaderCell(text) {
   return cell;
 }
 
-// 11. FACULTY ATTENDANCE UTILITY MODULE
+// 11. STAFF WORKSPACE DASHBOARD RENDERER
+function renderStaffDashboardConsole() {
+  const staffName = activeUserSession.name;
+  const staffIdField = document.getElementById("stf-dash-id");
+  const staffNameField = document.getElementById("stf-dash-name");
+  const staffDeptField = document.getElementById("stf-dash-dept");
+  const allocationTbody = document.getElementById("stf-dash-allocations-tbody");
+
+  if (!staffIdField) return;
+
+  const staffList = JSON.parse(localStorage.getItem("MASTER_STAFFS")) || [];
+  const allocationsList = JSON.parse(localStorage.getItem("MASTER_ALLOCATIONS")) || [];
+  const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
+  const timetableList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+
+  const profile = staffList.find(s => s[1] === staffName);
+  
+  staffIdField.innerText = profile ? profile[0] : activeUserSession.uid;
+  staffNameField.innerText = staffName;
+  staffDeptField.innerText = profile ? profile[2] : "Faculty Department Stream";
+
+  const activeAllocations = allocationsList.filter(row => row[0] === staffName);
+  
+  if (activeAllocations.length === 0) {
+    allocationTbody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No active allocations mapped to your account.</td></tr>";
+    return;
+  }
+
+  allocationTbody.innerHTML = "";
+  activeAllocations.forEach(alloc => {
+    let subObj = subjectList.find(s => s[0] === alloc[2]);
+    let subName = subObj ? subObj[1] : "Seminar / Lab Session";
+
+    let matchingPeriods = [];
+    timetableList.forEach(tt => {
+      if (tt[0] === alloc[1]) {
+        for (let hr = 1; hr <= 7; hr++) {
+          let fieldVal = tt[hr + 1] || "";
+          if (fieldVal.includes(alloc[2]) && fieldVal.includes(staffName)) {
+            matchingPeriods.push(`${tt[1]} (Period ${hr})`);
+          }
+        }
+      }
+    });
+
+    let periodsLabel = matchingPeriods.length > 0 ? matchingPeriods.join(", ") : "Manual Entry Allocation";
+
+    let tr = `
+      <tr>
+        <td><strong>${alloc[2]}</strong></td>
+        <td>${subName}</td>
+        <td>${alloc[1]}</td>
+        <td><span class="mode-badge" style="background:var(--slate-100); color:var(--slate-700);">${periodsLabel}</span></td>
+      </tr>`;
+    allocationTbody.insertAdjacentHTML("beforeend", tr);
+  });
+}
+
+// 12. DYNAMIC WORKSPACE ATTENDANCE MODULE
+let activeSelectedSubjectRuntime = "";
+let activeSelectedPeriodRuntime = "";
+
+function filterSubjectsByAssignedStaff() {
+  const classSelect = document.getElementById("att-class-select");
+  const listContainer = document.getElementById("att-students-list-view");
+  if (!classSelect) return;
+
+  const selectedClass = classSelect.value;
+  if (!selectedClass) {
+    listContainer.innerHTML = "<p style='padding: 20px; color: var(--slate-400);'>Choose target class sector first.</p>";
+    return;
+  }
+
+  const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
+  const allocationsList = JSON.parse(localStorage.getItem("MASTER_ALLOCATIONS")) || [];
+  const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
+  const activeDate = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
+
+  let assignedSubjects = [];
+
+  if (activeUserSession.role === "ADMIN") {
+    assignedSubjects = subjectList;
+  } else {
+    const staffName = activeUserSession.name;
+    const codes = allocationsList
+      .filter(row => row[1] === selectedClass && row[0] === staffName)
+      .map(row => row[2]);
+    assignedSubjects = subjectList.filter(s => codes.includes(s[0]));
+  }
+
+  if (assignedSubjects.length === 0) {
+    listContainer.innerHTML = "<p style='padding: 20px;'>No subjects allocated for your profile in this class.</p>";
+    return;
+  }
+
+  let html = `
+    <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 15px;">
+      <div class="form-field-group">
+        <label style="font-weight: 700; color: var(--slate-800);">Step 1: Choose Mapped Subject</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+  `;
+
+  assignedSubjects.forEach(sub => {
+    // Check if other co-instructor has already registered attendance for this class + subject + date combination
+    const isAlreadyMarkedByCoStaff = attendanceLogs.some(log => 
+      log[0] === activeDate && 
+      log[1].startsWith(sub[0]) && 
+      log[2] === selectedClass && 
+      log[5] !== activeUserSession.name
+    );
+
+    const isMarkedByMe = attendanceLogs.some(log => 
+      log[0] === activeDate && 
+      log[1].startsWith(sub[0]) && 
+      log[2] === selectedClass && 
+      log[5] === activeUserSession.name
+    );
+
+    let statusBadge = `<span class="mode-badge" style="background:#fee2e2; color:#b91c1c;">Pending</span>`;
+    
+    // Threshold date override logic (For dates strictly before 20.07.2026)
+    const parsedTargetDate = new Date(activeDate);
+    const limitDate = new Date("2026-07-20");
+    if (parsedTargetDate < limitDate) {
+      statusBadge = `<span class="mode-badge" style="background:var(--slate-200); color:var(--slate-600);">No Action (Before July 20)</span>`;
+    } else if (isMarkedByMe) {
+      statusBadge = `<span class="mode-badge" style="background:#d1fae5; color:#065f46;">Completed (By You)</span>`;
+    } else if (isAlreadyMarkedByCoStaff) {
+      statusBadge = `<span class="mode-badge" style="background:#e0f2fe; color:#0369a1;">Already Updated (Co-Staff)</span>`;
+    }
+
+    if (isAlreadyMarkedByCoStaff) {
+      // Locked out if another co-staff member updated it
+      html += `
+        <div style="border: 1px solid var(--slate-200); padding: 15px; border-radius: 12px; flex: 1; min-width: 250px; background: var(--slate-50); opacity: 0.7;">
+          <strong>${sub[0]}</strong><br/>
+          <span style="font-size:12px; color:var(--slate-500);">${sub[1]}</span><br/>
+          ${statusBadge}
+          <p style="font-size:11px; margin-top:6px; color:var(--slate-500);"><i class="fas fa-lock"></i> Synced by co-instructor.</p>
+        </div>`;
+    } else {
+      html += `
+        <button type="button" class="action-btn" onclick="handleSubjectClickForPeriodSelection('${sub[0]}', '${selectedClass}')" style="background:var(--slate-800); text-align: left; height: auto; min-width: 250px; flex: 1; display:flex; flex-direction:column; gap:6px;">
+          <div style="font-weight:700;">${sub[0]}</div>
+          <div style="font-size:12px; font-weight:normal; opacity:0.8;">${sub[1]}</div>
+          ${statusBadge}
+        </button>`;
+    }
+  });
+
+  html += `</div></div><div id="dynamic-period-selection-wrapper"></div><div id="dynamic-student-checklist-wrapper"></div></div>`;
+  listContainer.innerHTML = html;
+}
+
+function handleSubjectClickForPeriodSelection(subCode, classId) {
+  activeSelectedSubjectRuntime = subCode;
+  const periodWrapper = document.getElementById("dynamic-period-selection-wrapper");
+  const studentWrapper = document.getElementById("dynamic-student-checklist-wrapper");
+  if (!periodWrapper) return;
+  
+  studentWrapper.innerHTML = ""; 
+
+  const timetables = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const activeDateVal = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
+  const activeDayName = days[new Date(activeDateVal).getDay()];
+
+  let availablePeriods = [];
+  const dayPlan = timetables.find(row => row[0] === classId && row[1] === activeDayName);
+  
+  if (dayPlan) {
+    for (let hr = 1; hr <= 7; hr++) {
+      let cellData = dayPlan[hr + 1] || "";
+      if (cellData.includes("|")) {
+        let subjectToken = cellData.split("|")[0];
+        if (subjectToken === subCode) {
+          availablePeriods.push(hr);
+        }
+      }
+    }
+  }
+
+  // Fallback setup to let staff select any period if not strictly in dynamic timetable matrix
+  if (availablePeriods.length === 0) {
+    availablePeriods = [1, 2, 3, 4, 5, 6, 7];
+  }
+
+  let html = `
+    <div class="form-field-group" style="margin-top: 15px;">
+      <label style="font-weight: 700; color: var(--slate-800);">Step 2: Choose Mapped Period hour</label>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+  `;
+
+  availablePeriods.forEach(p => {
+    html += `
+      <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:var(--sky-600); min-width: 100px;">
+        Period ${p}
+      </button>`;
+  });
+
+  html += `</div></div>`;
+  periodWrapper.innerHTML = html;
+}
+
+function handlePeriodClickForStudentList(periodNumber, classId) {
+  activeSelectedPeriodRuntime = periodNumber;
+  const studentWrapper = document.getElementById("dynamic-student-checklist-wrapper");
+  if (!studentWrapper) return;
+
+  const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
+  const classStudents = studentsList.filter(s => s[2] === classId);
+
+  if (classStudents.length === 0) {
+    studentWrapper.innerHTML = "<p style='padding: 15px;'>No student profiles registered in this section class.</p>";
+    return;
+  }
+
+  const activeDate = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
+  const fullAttendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
+
+  let html = `
+    <div class="form-field-group" style="margin-top:20px;">
+      <label style="font-weight: 700; color: var(--slate-800);">Step 3: Present / Absent Checklist (Subject: ${activeSelectedSubjectRuntime} | Period: ${periodNumber})</label>
+      <table class="att-list-table">
+        <thead>
+          <tr>
+            <th>Student Roll No</th>
+            <th>Full Name</th>
+            <th style="text-align:center;">Action Status</th>
+          </tr>
+        </thead>
+        <tbody id="register-entries">
+  `;
+
+  classStudents.forEach(student => {
+    let subColumnKey = `${activeSelectedSubjectRuntime}_P${periodNumber}`;
+    let preExisting = fullAttendanceLogs.find(log => 
+      log[0] === activeDate && 
+      log[1] === subColumnKey && 
+      log[2] === classId && 
+      log[3] === student[0]
+    );
+
+    let status = preExisting ? preExisting[4] : "PRESENT";
+
+    html += `
+      <tr>
+        <td><strong>${student[0]}</strong></td>
+        <td>${student[1]}</td>
+        <td style="text-align:center;">
+          <button type="button" class="att-status-btn ${status === "PRESENT" ? "present-state" : "absent-state"}" id="att-btn-${student[0]}" data-status="${status}">
+            ${status}
+          </button>
+        </td>
+      </tr>`;
+  });
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  studentWrapper.innerHTML = html;
+
+  classStudents.forEach(student => {
+    const btn = document.getElementById(`att-btn-${student[0]}`);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        let currentStatus = btn.getAttribute("data-status");
+        let nextStatus = currentStatus === "PRESENT" ? "ABSENT" : "PRESENT";
+        btn.setAttribute("data-status", nextStatus);
+        btn.innerText = nextStatus;
+        btn.className = `att-status-btn ${nextStatus === "PRESENT" ? "present-state" : "absent-state"}`;
+      });
+    }
+  });
+}
+
+function generateAttendanceRegisterForm() {
+  filterSubjectsByAssignedStaff();
+}
+
 async function saveFacultyAttendanceRegister() {
   const classId = document.getElementById("att-class-select").value;
-  const activeDate = document.getElementById("att-date-picker").value;
+  const activeDate = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
   
-  // High-Priority Admin Specific Event & Internship Custom Setup Check
-  const attCategorySelect = document.getElementById("att-category-select");
-  const currentCategory = attCategorySelect ? attCategorySelect.value : "REGULAR";
-  
-  let activeSub = "";
-  if (currentCategory === "REGULAR") {
-    activeSub = document.getElementById("att-subject-select").value;
-    if (!activeSub) {
-      alert("Please select a subject!");
-      return;
-    }
-  } else {
-    // Save under the respective Event/Internship tag for cleaner tracking
-    activeSub = currentCategory; 
+  if (!activeSelectedSubjectRuntime || !activeSelectedPeriodRuntime) {
+    alert("Please select subject and click active period hour checklist first!");
+    return;
   }
 
   const entriesBody = document.getElementById("register-entries");
@@ -696,12 +915,14 @@ async function saveFacultyAttendanceRegister() {
 
   setGlobalSyncState(true);
 
+  const recordSubKey = `${activeSelectedSubjectRuntime}_P${activeSelectedPeriodRuntime}`;
+
   for (let btn of buttons) {
     let studentId = btn.id.replace("att-btn-", "");
     let capturedStatus = btn.getAttribute("data-status");
 
-    let matchIdx = logs.findIndex(log => log[0] === activeDate && log[1] === activeSub && log[2] === classId && log[3] === studentId);
-    let payload = [activeDate, activeSub, classId, studentId, capturedStatus, activeUserSession.name];
+    let matchIdx = logs.findIndex(log => log[0] === activeDate && log[1] === recordSubKey && log[2] === classId && log[3] === studentId);
+    let payload = [activeDate, recordSubKey, classId, studentId, capturedStatus, activeUserSession.name];
     let recordId = matchIdx > -1 ? logs[matchIdx][logs[matchIdx].length - 1] : "REC-ATT-" + Date.now() + "-" + Math.floor(Math.random()*1000);
     payload.push(recordId);
 
@@ -713,68 +934,12 @@ async function saveFacultyAttendanceRegister() {
 
   localStorage.setItem("DAILY_ATTENDANCE", JSON.stringify(logs));
   setGlobalSyncState(false);
-  alert("All student attendance records updated and synchronized!");
-}
-
-function generateAttendanceRegisterForm() {
-  const classId = document.getElementById("att-class-select").value;
-  const activeDate = document.getElementById("att-date-picker").value;
+  alert("Success: Verification sheet successfully updated and synchronized!");
   
-  const attCategorySelect = document.getElementById("att-category-select");
-  const currentCategory = attCategorySelect ? attCategorySelect.value : "REGULAR";
-
-  let activeSub = "";
-  if (currentCategory === "REGULAR") {
-    activeSub = document.getElementById("att-subject-select").value;
-    if (!classId || !activeDate || !activeSub) {
-      alert("Select structural targets first!");
-      return;
-    }
-  } else {
-    activeSub = currentCategory;
-    if (!classId || !activeDate) {
-      alert("Select Class and Date targets first!");
-      return;
-    }
-  }
-
-  const listContainer = document.getElementById("att-students-list-view");
-  listContainer.innerHTML = "";
-  const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
-  const classStudents = studentsList.filter(s => s[2] === classId);
-
-  if (classStudents.length === 0) {
-    listContainer.innerHTML = "<p style='padding: 20px;'>No active student indices found.</p>";
-    return;
-  }
-
-  const fullAttendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
-  let table = document.createElement("table");
-  table.className = "att-list-table";
-  table.innerHTML = `<thead><tr><th>ID</th><th>Name</th><th style='text-align:center;'>Status</th></tr></thead><tbody id="register-entries"></tbody>`;
-  listContainer.appendChild(table);
-
-  const entriesBody = document.getElementById("register-entries");
-  classStudents.forEach(student => {
-    let preExisting = fullAttendanceLogs.find(log => log[0] === activeDate && log[1] === activeSub && log[2] === classId && log[3] === student[0]);
-    let status = preExisting ? preExisting[4] : "PRESENT";
-
-    let tr = document.createElement("tr");
-    tr.innerHTML = `<td><strong>${student[0]}</strong></td><td>${student[1]}</td>
-      <td style='text-align:center;'><button type='button' class='att-status-btn ${status === "PRESENT" ? "present-state" : "absent-state"}' id='att-btn-${student[0]}' data-status='${status}'>${status}</button></td>`;
-    
-    let btn = tr.querySelector(`#att-btn-${student[0]}`);
-    btn.addEventListener("click", () => {
-      let next = btn.getAttribute("data-status") === "PRESENT" ? "ABSENT" : "PRESENT";
-      btn.setAttribute("data-status", next);
-      btn.innerText = next;
-      btn.className = `att-status-btn ${next === "PRESENT" ? "present-state" : "absent-state"}`;
-    });
-    entriesBody.appendChild(tr);
-  });
+  filterSubjectsByAssignedStaff();
 }
 
-// 12. STUDENT VIEW PORTAL ENGINE
+// 13. STUDENT VIEW PORTAL ENGINE
 function renderStudentSelfProfileViewer() {
   const loggedStudentID = activeUserSession.uid;
   const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
@@ -833,4 +998,8 @@ function renderStudentSelfProfileViewer() {
       attHistoryBody.insertAdjacentHTML('beforeend', `<tr><td><strong>${log[0]}</strong></td><td>${log[1]}</td><td><span style="font-weight:700; color:${log[4]==='PRESENT'?'#166534':'#991b1b'}">${log[4]}</span></td><td>${log[5]}</td></tr>`);
     });
   }
+}
+
+function handleAttendanceCategoryToggle() {
+  // Utility toggle helper
 }
