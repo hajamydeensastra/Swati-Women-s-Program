@@ -84,7 +84,7 @@
         <li class="menu-item admin-only-opt" data-target="staff-management-section">
           <i class="fas fa-chalkboard-teacher"></i> Faculty Register
         </li>
-        <!-- NEW MENU ITEM FOR SUBJECT ALLOCATION -->
+        <!-- MENU ITEM FOR SUBJECT ALLOCATION -->
         <li class="menu-item admin-only-opt" data-target="subject-allocation-section">
           <i class="fas fa-tasks"></i> Subject Allocation
         </li>
@@ -94,6 +94,9 @@
         <li class="menu-item admin-only-opt" data-target="timetable-creator-section">
           <i class="fas fa-calendar-alt"></i> Matrix Planner
         </li>
+        <li class="menu-item admin-only-opt" data-target="marks-entry-management-section">
+          <i class="fas fa-marker"></i> Student Marks Desk
+        </li>
         
         <!-- STAFF PORTAL MENU ITEMS -->
         <li class="menu-item staff-only-opt" data-target="staff-dashboard-section" id="staff-sidebar-dashboard" style="display: none;">
@@ -101,6 +104,9 @@
         </li>
         <li class="menu-item staff-only-opt" data-target="staff-attendance-section" id="staff-sidebar-attendance" style="display: none;">
           <i class="fas fa-clipboard-check"></i> Attendance Entry
+        </li>
+        <li class="menu-item staff-only-opt" data-target="marks-entry-management-section" id="staff-sidebar-marks" style="display: none;">
+          <i class="fas fa-marker"></i> Marks Registry
         </li>
 
         <li class="menu-item" id="student-menu-profile" data-target="student-profile-section" style="display: none;">
@@ -709,6 +715,41 @@
           </div>
           <button class="action-btn" onclick="saveFacultyAttendanceRegister()" style="margin-top: 30px; width: 100%; background: var(--slate-900);">
             Commit & Sync Verification Sheet
+          </button>
+        </div>
+      </div>
+
+      <!-- DYNAMIC MARKS ENTRY TERMINAL MODULE -->
+      <div id="marks-entry-management-section" class="tab-content">
+        <header>
+          <h1>Student Marks Verification Console</h1>
+        </header>
+        <div class="data-section">
+          <h2>Generate Academic Marks Sheet</h2>
+          <div class="form-grid-layout" style="align-items: end;">
+            <div class="form-field-group">
+              <label>Target Sectors Class *</label>
+              <select id="marks-class-select" onchange="filterSubjectsForMarksEntry()"></select>
+            </div>
+            <div class="form-field-group">
+              <label>Target Subject Index *</label>
+              <select id="marks-subject-select" onchange="loadMarksEntrySheet()"></select>
+            </div>
+            <button class="action-btn" onclick="loadMarksEntrySheet()" style="height: 46px;">
+              Load Marks Sheet
+            </button>
+          </div>
+        </div>
+
+        <div class="data-section">
+          <h2>Active Internal Evaluation Register</h2>
+          <div id="marks-entry-container" class="table-container">
+            <p style="padding: 20px; color: var(--slate-400); font-weight: 500;">
+              No active marks spreadsheet generated. Map Class filters above and look up evaluations.
+            </p>
+          </div>
+          <button class="action-btn" onclick="saveStudentsMarksRegister()" style="margin-top: 30px; width: 100%; background: var(--slate-900);">
+            Commit & Sync Marks Ledger
           </button>
         </div>
       </div>
