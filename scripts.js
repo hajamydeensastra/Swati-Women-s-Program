@@ -799,7 +799,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
   const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
   const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
   
-  // Input-la select panni irukura date-oda exact Day (e.g., TUESDAY) edukurom
   const activeDateVal = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
   const activeDayName = days[new Date(activeDateVal).getDay()].toUpperCase();
   const staffName = activeUserSession.name;
@@ -812,7 +811,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
       let cellData = dayPlan[hr + 1] || "";
       if (cellData.includes("|")) {
         let [subjectToken, staffToken] = cellData.split("|");
-        // Staff name matrum subject code exact match aana mattum thaan array-la push aagum
         if (subjectToken.trim() === subCode && (activeUserSession.role === "ADMIN" || staffToken.includes(staffName))) {
           availablePeriods.push(hr);
         }
@@ -820,8 +818,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
     }
   }
 
-  // Fallback system-ah completely remove pannitom! 
-  // Timetable-la record illai endral empty-ah thaan kaatum (unassigned periods display aagathu)
   if (availablePeriods.length === 0) {
     periodWrapper.innerHTML = `
       <div class="form-field-group" style="margin-top: 15px;">
@@ -842,7 +838,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
   availablePeriods.forEach(p => {
     let subColumnKey = `${subCode}_P${p}`;
     
-    // Check if attendance is already uploaded
     let alreadyMarkedLog = attendanceLogs.find(log => 
       log[0] === activeDateVal && 
       log[1] === subColumnKey && 
@@ -853,14 +848,16 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
       let markerName = alreadyMarkedLog[5];
       let isByMe = markerName === staffName;
       
+      // COMPLETED status-la iruntha disabled option-um, not-allowed cursor-um applied aagum
       html += `
-        <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:#059669; min-width: 150px; text-align:center;">
+        <button type="button" class="action-btn" disabled style="background:#059669; min-width: 150px; text-align:center; opacity: 0.75; cursor: not-allowed;">
           Period ${p} <br/>
           <span style="font-size:10px; font-weight:600; opacity:0.9;">
             ${isByMe ? 'COMPLETED (You)' : `COMPLETED (${markerName})`}
           </span>
         </button>`;
     } else {
+      // PENDING status-la iruntha normal-ah click panna mudiyum
       html += `
         <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:var(--sky-600); min-width: 150px; text-align:center;">
           Period ${p} <br/>
