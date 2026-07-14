@@ -94,9 +94,15 @@
         <li class="menu-item admin-only-opt" data-target="timetable-creator-section">
           <i class="fas fa-calendar-alt"></i> Matrix Planner
         </li>
-        <li class="menu-item staff-only-opt" data-target="staff-attendance-section">
-          <i class="fas fa-clipboard-check"></i> Take Attendance
+        
+        <!-- STAFF PORTAL MENU ITEMS -->
+        <li class="menu-item staff-only-opt" data-target="staff-dashboard-section" id="staff-sidebar-dashboard" style="display: none;">
+          <i class="fas fa-th-large"></i> Dashboard
         </li>
+        <li class="menu-item staff-only-opt" data-target="staff-attendance-section" id="staff-sidebar-attendance" style="display: none;">
+          <i class="fas fa-clipboard-check"></i> Attendance Entry
+        </li>
+
         <li class="menu-item" id="student-menu-profile" data-target="student-profile-section" style="display: none;">
           <i class="fas fa-address-card"></i> Student Desk
         </li>
@@ -133,6 +139,45 @@
             <p style="font-size: 13px; font-weight: 500; color: var(--slate-600); margin-top: 10px;">
               Perform 'Pull & Sync' regularly to synchronize local changes to Cloud Spreadsheet.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAFF DASHBOARD WORKSPACE VIEW -->
+      <div id="staff-dashboard-section" class="tab-content">
+        <header>
+          <h1>Staff Workspace Console</h1>
+        </header>
+        <div class="profile-card" style="margin-bottom: 30px;">
+          <div class="info-tile">
+            <span>Staff Name</span>
+            <p id="stf-dash-name">-</p>
+          </div>
+          <div class="info-tile">
+            <span>Staff ID</span>
+            <p id="stf-dash-id">-</p>
+          </div>
+          <div class="info-tile">
+            <span>Department</span>
+            <p id="stf-dash-dept">-</p>
+          </div>
+        </div>
+        <div class="data-section">
+          <h2>Your Assigned Subjects & Allocated Periods</h2>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Subject Code</th>
+                  <th>Subject Name</th>
+                  <th>Allocated Class</th>
+                  <th>Assigned Periods (Timetable)</th>
+                </tr>
+              </thead>
+              <tbody id="stf-dash-allocations-tbody">
+                <tr><td colspan="4">No active allocations mapped.</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -395,7 +440,7 @@
         </div>
       </div>
 
-      <!-- NEW TAB CONTENT FOR SUBJECT ALLOCATIONS -->
+      <!-- SUBJECT ALLOCATIONS -->
       <div id="subject-allocation-section" class="tab-content">
         <header>
           <h1>Subject Allocation Desk</h1>
@@ -640,13 +685,14 @@
             <div class="form-field-group" id="admin-att-type-wrapper" style="display: none;">
               <label>Attendance Category *</label>
               <select id="att-category-select" onchange="handleAttendanceCategoryToggle()">
+                <option value="REGULAR">Regular Class Attendance</option>
                 <option value="EVENT">Event Attendance</option>
                 <option value="INTERNSHIP">Internship Attendance</option>
               </select>
             </div>
             <div class="form-field-group">
               <label>Active Working Date *</label>
-              <input type="date" id="att-date-picker">
+              <input type="date" id="att-date-picker" onchange="filterSubjectsByAssignedStaff()">
             </div>
             <button class="action-btn" onclick="generateAttendanceRegisterForm()" style="height: 46px;">
               Load Checklist
