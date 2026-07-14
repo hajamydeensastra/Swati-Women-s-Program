@@ -189,6 +189,27 @@ async function syncWithGoogleSheet(sheetTab, payload, headers, action, recordId 
   }
 }
 
+// 5.5 NEW ADMIN DASHBOARD COUNTERS RENDERER
+function renderAdminDashboardSummary() {
+  const users = JSON.parse(localStorage.getItem("MASTER_USERS")) || [];
+  const courses = JSON.parse(localStorage.getItem("MASTER_COURSES")) || [];
+  const classes = JSON.parse(localStorage.getItem("MASTER_CLASSES")) || [];
+  const staff = JSON.parse(localStorage.getItem("MASTER_STAFFS")) || [];
+  const students = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
+
+  const usersEl = document.getElementById("dash-count-users");
+  const coursesEl = document.getElementById("dash-count-courses");
+  const classesEl = document.getElementById("dash-count-classes");
+  const staffEl = document.getElementById("dash-count-staff");
+  const studentsEl = document.getElementById("dash-count-students");
+
+  if (usersEl) usersEl.innerText = users.length;
+  if (coursesEl) coursesEl.innerText = courses.length;
+  if (classesEl) classesEl.innerText = classes.length;
+  if (staffEl) staffEl.innerText = staff.length;
+  if (studentsEl) studentsEl.innerText = students.length;
+}
+
 function sheetTabForKey(key, optionalRowData = null) {
   const map = {
     MASTER_USERS: "Master_Users",
@@ -425,6 +446,9 @@ function renderAllTables() {
   renderDatasetToTable("staff-table-body", "MASTER_STAFFS", [0, 1, 2, 3], ["Staff ID", "Name", "Dept", "Contact"]);
   renderDatasetToTable("allocation-table-body", "MASTER_ALLOCATIONS", [0, 1, 2], ["Faculty", "Class ID", "Subject Code"]);
   renderDatasetToTable("student-table-body", "MASTER_STUDENTS", [0, 1, 2, 3, 4, 5, 6, 11], ["ID", "Name", "Class", "Course", "Status", "DOB", "Age", "Accom"]);
+  
+  // Render Dynamic Counters on Admin Dashboard
+  renderAdminDashboardSummary();
 }
 
 function renderDatasetToTable(tbodyId, tblKey, displayColIndices, headerLabels) {
