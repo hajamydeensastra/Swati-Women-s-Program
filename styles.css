@@ -30,7 +30,7 @@ body {
   color: var(--slate-900); 
   min-height: 100vh; 
   display: flex; 
-  flex-direction: column;
+  flex-direction: column; 
   overflow-x: hidden;
 }
 
@@ -51,7 +51,7 @@ body {
   margin: 0 auto; 
 }
 .logo-container-flex img { 
-  height: 58px; 
+  height: 65px; /* Perfect top size setup */
   object-fit: contain; 
   transition: transform 0.2s ease;
 }
@@ -84,7 +84,7 @@ body {
   align-items: center; 
 }
 .login-logo-wrapper img { 
-  height: 50px; 
+  height: 90px; 
   object-fit: contain; 
 }
 .login-container { 
@@ -180,10 +180,10 @@ body {
 }
 .sidebar { 
   width: 290px; 
-  height: calc(100vh - 95px); 
+  height: calc(100vh - 100px); 
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
   position: sticky; 
-  top: 95px; 
+  top: 100px; 
   padding: 30px 20px; 
   display: none; 
   flex-direction: column; 
@@ -237,7 +237,7 @@ body {
 .main-content { 
   flex-grow: 1; 
   padding: 40px; 
-  min-height: calc(100vh - 95px); 
+  min-height: calc(100vh - 100px); 
   display: none; 
   overflow-x: hidden; 
 }
