@@ -189,25 +189,34 @@ async function syncWithGoogleSheet(sheetTab, payload, headers, action, recordId 
   }
 }
 
-// 5.5 NEW ADMIN DASHBOARD COUNTERS RENDERER
+// 5.5 MODIFIED ADMIN DASHBOARD COUNTERS RENDERER
 function renderAdminDashboardSummary() {
-  const users = JSON.parse(localStorage.getItem("MASTER_USERS")) || [];
-  const courses = JSON.parse(localStorage.getItem("MASTER_COURSES")) || [];
-  const classes = JSON.parse(localStorage.getItem("MASTER_CLASSES")) || [];
   const staff = JSON.parse(localStorage.getItem("MASTER_STAFFS")) || [];
   const students = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
 
-  const usersEl = document.getElementById("dash-count-users");
-  const coursesEl = document.getElementById("dash-count-courses");
-  const classesEl = document.getElementById("dash-count-classes");
+  // Calculate Dayscholar and Hosteler counts based on 'MASTER_STUDENTS' database
+  let dayscholarCount = 0;
+  let hostelerCount = 0;
+  
+  students.forEach(student => {
+    // Accommodation configuration is at index 11
+    let accommodation = student[11] ? String(student[11]).trim().toLowerCase() : "";
+    if (accommodation === "dayscholar") {
+      dayscholarCount++;
+    } else if (accommodation === "hostel") {
+      hostelerCount++;
+    }
+  });
+
   const staffEl = document.getElementById("dash-count-staff");
   const studentsEl = document.getElementById("dash-count-students");
+  const dayscholarEl = document.getElementById("dash-count-dayscholar");
+  const hostelerEl = document.getElementById("dash-count-hosteler");
 
-  if (usersEl) usersEl.innerText = users.length;
-  if (coursesEl) coursesEl.innerText = courses.length;
-  if (classesEl) classesEl.innerText = classes.length;
   if (staffEl) staffEl.innerText = staff.length;
   if (studentsEl) studentsEl.innerText = students.length;
+  if (dayscholarEl) dayscholarEl.innerText = dayscholarCount;
+  if (hostelerEl) hostelerEl.innerText = hostelerCount;
 }
 
 function sheetTabForKey(key, optionalRowData = null) {
@@ -333,6 +342,7 @@ function refreshFormDropdownLists() {
   populateSelectControl("tt-class-select", classList, 0, 1);
   populateSelectControl("att-class-select", classList, 0, 1);
   populateSelectControl("marks-class-select", classList, 0, 1);
+  populateSelectControl("modal-tt-class-select", classList, 0, 1); // Modal Timetable Selector
 
   populateSelectControl("alloc-staff-select", staffList, 1, 0); 
   populateSelectControl("alloc-class-select", classList, 0, 1);
@@ -421,20 +431,6 @@ function handleUniversalEdit(tblKey, rowIdx, inputControlIds) {
 
   if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
   alert("Row parameters successfully bound to UI editors! Edit and commit form.");
-}
-
-function handleUniversalDelete(tblKey, rowIdx) {
-  if (!confirm("Are you sure you want to permanently delete this record?")) return;
-  let valuesMatrix = JSON.parse(localStorage.getItem(tblKey)) || [];
-  let targetRowData = valuesMatrix[rowIdx];
-  let recordId = targetRowData[targetRowData.length - 1];
-
-  let targetTab = sheetTabForKey(tblKey, targetRowData);
-  if (targetTab) syncWithGoogleSheet(targetTab, [], [], "DELETE", recordId);
-
-  valuesMatrix.splice(rowIdx, 1);
-  localStorage.setItem(tblKey, JSON.stringify(valuesMatrix));
-  renderAllTables();
 }
 
 // 9. DYNAMIC GRID & TABLE RENDERERS
@@ -641,6 +637,93 @@ function createHeaderCell(text) {
   cell.style.whiteSpace = "pre-line";
   cell.innerText = text;
   return cell;
+}
+
+// 10.5 TIMETABLE POPUP MODAL CONTROL LOGIC
+function openTimetableModalPopup() {
+  const modal = document.getElementById("timetable-popup-modal");
+  if (modal) {
+    modal.style.display = "flex";
+    renderModalTimetableGrid(); // Trigger initial state
+  }
+}
+
+function closeTimetableModalPopup() {
+  const modal = document.getElementById("timetable-popup-modal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function renderModalTimetableGrid() {
+  const classId = document.getElementById("modal-tt-class-select").value;
+  const gridContainer = document.getElementById("modal-tt-runtime-grid");
+  if (!gridContainer) return;
+
+  if (!classId) {
+    gridContainer.innerHTML = `<p style="grid-column: span 11; text-align: center; color: var(--slate-400); padding: 40px 0;">Please select a class from the dropdown above to display its timetable grid.</p>`;
+    return;
+  }
+
+  gridContainer.innerHTML = "";
+  const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
+
+  const timeLabels = [
+    "08:45-09:45\n(Period 1)", "09:45-10:45\n(Period 2)", "10:45-11:00\n(BREAK)",
+    "11:00-12:00\n(Period 3)", "12:00-01:00\n(Period 4)", "01:00-02:00\n(LUNCH)",
+    "02:00-03:00\n(Period 5)", "03:00-03:15\n(BREAK)", "03:15-04:15\n(Period 6)", "04:15-05:16\n(Period 7)"
+  ];
+
+  gridContainer.appendChild(createHeaderCell("DAY / TIMINGS"));
+  timeLabels.forEach(lbl => gridContainer.appendChild(createHeaderCell(lbl)));
+
+  days.forEach(dayName => {
+    let dayRowCell = document.createElement("div");
+    dayRowCell.className = "tt-cell tt-day";
+    dayRowCell.innerText = dayName;
+    gridContainer.appendChild(dayRowCell);
+
+    let mappedDayData = ttList.find(row => row[0] === classId && row[1] === dayName);
+    
+    let periodTrackingCounter = 1;
+    for (let currentSlot = 1; currentSlot <= 10; currentSlot++) {
+      if (currentSlot === 3) {
+        let breakCell = document.createElement("div");
+        breakCell.className = "tt-cell tt-break";
+        breakCell.innerText = "BREAK";
+        gridContainer.appendChild(breakCell);
+        continue;
+      }
+      if (currentSlot === 6) {
+        let lunchBreak = document.createElement("div");
+        lunchBreak.className = "tt-cell tt-break";
+        lunchBreak.innerText = "LUNCH";
+        gridContainer.appendChild(lunchBreak);
+        continue;
+      }
+      if (currentSlot === 8) {
+        let breakCell = document.createElement("div");
+        breakCell.className = "tt-cell tt-break";
+        breakCell.innerText = "BREAK";
+        gridContainer.appendChild(breakCell);
+        continue;
+      }
+
+      let cellValue = mappedDayData ? mappedDayData[periodTrackingCounter + 1] : "";
+      let cellNode = document.createElement("div");
+      cellNode.className = "tt-cell";
+
+      if (cellValue && cellValue.includes("|")) {
+        let [sub, staff] = cellValue.split("|");
+        cellNode.innerHTML = `<div class="tt-subject-title">${sub}</div><div class="tt-staff-lbl">${staff}</div>`;
+      } else {
+        cellNode.innerText = "-";
+      }
+      gridContainer.appendChild(cellNode);
+      periodTrackingCounter++;
+    }
+  });
 }
 
 // 11. STAFF WORKSPACE DASHBOARD RENDERER (OPTIMIZED WITH COMPLETED TRACKING)
@@ -1243,4 +1326,18 @@ async function saveStudentsMarksRegister() {
   localStorage.setItem("STUDENT_MARKS", JSON.stringify(marksLogs));
   setGlobalSyncState(false);
   alert("Success: Student marks successfully computed and synchronized!");
+}
+
+function handleUniversalDelete(tblKey, rowIdx) {
+  if (!confirm("Are you sure you want to permanently delete this record?")) return;
+  let valuesMatrix = JSON.parse(localStorage.getItem(tblKey)) || [];
+  let targetRowData = valuesMatrix[rowIdx];
+  let recordId = targetRowData[targetRowData.length - 1];
+
+  let targetTab = sheetTabForKey(tblKey, targetRowData);
+  if (targetTab) syncWithGoogleSheet(targetTab, [], [], "DELETE", recordId);
+
+  valuesMatrix.splice(rowIdx, 1);
+  localStorage.setItem(tblKey, JSON.stringify(valuesMatrix));
+  renderAllTables();
 }
