@@ -496,7 +496,7 @@
         </div>
       </div>
 
-      <div id="timetable-creator-section" class="tab-content">
+<div id="timetable-creator-section" class="tab-content">
         <header>
           <h1>Matrix Timetable Planner</h1>
         </header>
@@ -520,24 +520,33 @@
             </div>
           </div>
 
+          <!-- Dynamic 7 Periods Mapping Inputs with Multiple Staff Select Options -->
           <div id="tt-hours-dynamic-wrapper" style="margin-top: 30px; display: flex; flex-direction: column; gap: 16px;">
             <script>
               window.addEventListener("DOMContentLoaded", () => {
                 const wrapperNode = document.getElementById('tt-hours-dynamic-wrapper');
                 if (wrapperNode) {
-                  for (let hrIdx = 1; hrIdx <= 10; hrIdx++) {
+                  for (let hrIdx = 1; hrIdx <= 7; hrIdx++) {
                     let htmlStr = `
-                      <div class="inline-form" style="border-bottom: 1px dashed var(--slate-200); padding-bottom: 14px;">
-                        <div class="form-field-group" style="grid-column: span 1;">
+                      <div class="inline-form" style="border-bottom: 1px dashed var(--slate-200); padding-bottom: 14px; grid-template-columns: 80px repeat(4, 1fr);">
+                        <div class="form-field-group" style="justify-content: center;">
                           <span style="font-size: 13px; font-weight:700; color: var(--slate-700)">PERIOD ${hrIdx}</span>
                         </div>
                         <div class="form-field-group">
-                          <label>Assigned Subject</label>
+                          <label>Subject</label>
                           <select id="tt-sub-h${hrIdx}"></select>
                         </div>
                         <div class="form-field-group">
-                          <label>Faculty Instructor</label>
-                          <select id="tt-staff-h${hrIdx}"></select>
+                          <label>Primary Instructor</label>
+                          <select id="tt-staff1-h${hrIdx}"></select>
+                        </div>
+                        <div class="form-field-group">
+                          <label>Co-Instructor A</label>
+                          <select id="tt-staff2-h${hrIdx}"></select>
+                        </div>
+                        <div class="form-field-group">
+                          <label>Co-Instructor B</label>
+                          <select id="tt-staff3-h${hrIdx}"></select>
                         </div>
                       </div>`;
                     wrapperNode.insertAdjacentHTML('beforeend', htmlStr);
@@ -553,7 +562,7 @@
 
         <div class="data-section">
           <h2>Dynamic Interactive Matrix View</h2>
-          <div class="tt-grid" id="tt-matrix-runtime-grid"></div>
+          <div class="tt-grid" id="tt-matrix-runtime-grid" style="grid-template-columns: 140px repeat(10, minmax(130px, 1fr));"></div>
         </div>
       </div>
 
