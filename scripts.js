@@ -15,6 +15,7 @@ const SYSTEM_SCHEMA = {
   MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "Status", "DOB", "Age", "PrimaryContact", "SecondaryContact", "Std10th", "Std12th", "Accommodation", "HostelName", "RoomNo", "Address", "PhotoURL", "RecordID"],
   CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "RecordID"], 
   DAILY_ATTENDANCE: ["Date", "SubjectCode", "ClassID", "StudentID", "Status", "MarkedBy", "RecordID"]
+  MASTER_ALLOCATIONS: ["AllocationID", "StaffID", "ClassID", "SubjectCode", "RecordID"],
 };
 
 // 3. INTERNAL RUNTIME MEMORY
