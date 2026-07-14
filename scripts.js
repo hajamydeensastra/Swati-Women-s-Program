@@ -615,7 +615,7 @@ function createHeaderCell(text) {
   return cell;
 }
 
-// 11. STAFF WORKSPACE DASHBOARD RENDERER
+// 11. STAFF WORKSPACE DASHBOARD RENDERER (OPTIMIZED FOR AUTOMATIC TIMETABLE extraction)
 function renderStaffDashboardConsole() {
   const staffName = activeUserSession.name;
   const staffIdField = document.getElementById("stf-dash-id");
@@ -636,6 +636,7 @@ function renderStaffDashboardConsole() {
   staffNameField.innerText = staffName;
   staffDeptField.innerText = profile ? profile[2] : "Faculty Department Stream";
 
+  // Check allocations mapped to the logged-in staff
   const activeAllocations = allocationsList.filter(row => row[0] === staffName);
   
   if (activeAllocations.length === 0) {
@@ -644,31 +645,44 @@ function renderStaffDashboardConsole() {
   }
 
   allocationTbody.innerHTML = "";
+  
   activeAllocations.forEach(alloc => {
     let subObj = subjectList.find(s => s[0] === alloc[2]);
     let subName = subObj ? subObj[1] : "Seminar / Lab Session";
+    let targetClass = alloc[1]; // e.g., CSE-A-Y3
+    let targetSubjectCode = alloc[2]; // e.g., CS601-ALGO
 
     let matchingPeriods = [];
+
+    // Filter and pull scheduled periods/hours directly from the CLASS_TIMETABLES database
     timetableList.forEach(tt => {
-      if (tt[0] === alloc[1]) {
+      // tt[0] is ClassID, tt[1] is Day Name, tt[2] to tt[8] are Hour_1 to Hour_7
+      if (tt[0] === targetClass) {
         for (let hr = 1; hr <= 7; hr++) {
-          let fieldVal = tt[hr + 1] || "";
-          let currentStaffId = profile ? profile[0] : activeUserSession.uid;
-if (fieldVal.includes(alloc[2]) && (fieldVal.includes(staffName) || fieldVal.includes(currentStaffId))) {
-            matchingPeriods.push(`${tt[1]} (Period ${hr})`);
+          let fieldVal = tt[hr + 1] || ""; // cell data format: "SubjectCode|StaffName + CoStaff"
+          
+          if (fieldVal.includes("|")) {
+            let [subToken, staffToken] = fieldVal.split("|");
+            // Check if this specific subject and staff match the logged-in user
+            if (subToken.trim() === targetSubjectCode && staffToken.includes(staffName)) {
+              matchingPeriods.push(`${tt[1]} (Period ${hr})`);
+            }
           }
         }
       }
     });
 
-    let periodsLabel = matchingPeriods.length > 0 ? matchingPeriods.join(", ") : "Manual Entry Allocation";
+    // Formatting output labels
+    let periodsLabel = matchingPeriods.length > 0 
+      ? matchingPeriods.join(", ") 
+      : "<span style='color:var(--slate-400); font-style:italic;'>Not Scheduled in Timetable yet</span>";
 
     let tr = `
       <tr>
-        <td><strong>${alloc[2]}</strong></td>
+        <td><strong>${targetSubjectCode}</strong></td>
         <td>${subName}</td>
-        <td>${alloc[1]}</td>
-        <td><span class="mode-badge" style="background:var(--slate-100); color:var(--slate-700);">${periodsLabel}</span></td>
+        <td>${targetClass}</td>
+        <td><span class="mode-badge" style="background:var(--slate-100); color:var(--slate-700); font-weight:600; padding:6px 12px; display:inline-block; border-radius:8px;">${periodsLabel}</span></td>
       </tr>`;
     allocationTbody.insertAdjacentHTML("beforeend", tr);
   });
