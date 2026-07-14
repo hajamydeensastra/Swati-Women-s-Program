@@ -14,7 +14,8 @@
 
   <div class="login-page" id="login-screen">
     <div class="login-logo-wrapper">
-      <img src="https://images.unsplash.com/photo-1592280771190-3e2e4d571952?auto=format&fit=crop&w=200&q=80" alt="Institutional Logo">
+      <!-- Top Global Logo on Login -->
+      <img src="SASTRA_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
     </div>
     <div class="login-container">
       <div class="login-header">
@@ -43,9 +44,10 @@
     </div>
   </div>
 
+  <!-- Permanent Top Header for SASTRA Logo -->
   <header class="global-logo-header" id="global-header" style="display: none;">
     <div class="logo-container-flex">
-      <img src="https://images.unsplash.com/photo-1592280771190-3e2e4d571952?auto=format&fit=crop&w=400&q=80" alt="Enterprise Logo">
+      <img src="SASTRA_Logo.jpg" alt="SASTRA Logo">
       <span class="mode-badge" id="mode-flag-badge">PORTAL HUB</span>
     </div>
   </header>
@@ -496,7 +498,7 @@
         </div>
       </div>
 
-<div id="timetable-creator-section" class="tab-content">
+      <div id="timetable-creator-section" class="tab-content">
         <header>
           <h1>Matrix Timetable Planner</h1>
         </header>
@@ -575,13 +577,22 @@
           <div class="form-grid-layout" style="align-items: end;">
             <div class="form-field-group">
               <label>Target Sectors Class *</label>
-              <select id="att-class-select"></select>
+              <select id="att-class-select" onchange="filterSubjectsByAssignedStaff()"></select>
+            </div>
+            <!-- Admin Event/Internship vs Staff Attendance Logic Switch -->
+            <div class="form-field-group" id="admin-att-type-wrapper" style="display: none;">
+              <label>Attendance Category *</label>
+              <select id="att-category-select" onchange="handleAttendanceCategoryToggle()">
+                <option value="REGULAR">Regular Subject Wise Class</option>
+                <option value="EVENT">Event Attendance (Admin Only)</option>
+                <option value="INTERNSHIP">Internship Attendance (Admin Only)</option>
+              </select>
             </div>
             <div class="form-field-group">
               <label>Active Working Date *</label>
               <input type="date" id="att-date-picker">
             </div>
-            <div class="form-field-group">
+            <div class="form-field-group" id="subject-field-container">
               <label>Subject Index Track *</label>
               <select id="att-subject-select"></select>
             </div>
