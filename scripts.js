@@ -13,7 +13,7 @@ const SYSTEM_SCHEMA = {
   MASTER_SUBJECTS: ["SubjectCode", "SubjectName", "CourseCode", "Department", "RecordID"],
   MASTER_STAFFS: ["StaffID", "StaffName", "Department", "Contact", "RecordID"],
   MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "Status", "DOB", "Age", "PrimaryContact", "SecondaryContact", "Std10th", "Std12th", "Accommodation", "HostelName", "RoomNo", "Address", "PhotoURL", "RecordID"],
-  CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "RecordID"], // Dynamic 7 Periods Filter Checked
+  CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "RecordID"], 
   DAILY_ATTENDANCE: ["Date", "SubjectCode", "ClassID", "StudentID", "Status", "MarkedBy", "RecordID"]
 };
 
@@ -152,7 +152,6 @@ function syncAllFromGoogleSheets() {
     .finally(() => setGlobalSyncState(false));
 }
 
-// Asynchronous implementation to completely process logic without missing data sequence
 async function syncWithGoogleSheet(sheetTab, payload, headers, action, recordId = "") {
   if (!DEPLOYMENT_WEB_APP_URL) return;
   
@@ -233,17 +232,20 @@ function applyAuthorizationRules(role, name) {
 
   const adminMenuOpts = document.querySelectorAll(".admin-only-opt");
   const staffMenuOpts = document.querySelectorAll(".staff-only-opt");
+  const adminAttType = document.getElementById("admin-att-type-wrapper");
 
   if (role === "ADMIN") {
     adminMenuOpts.forEach(el => el.style.display = "flex");
     staffMenuOpts.forEach(el => el.style.display = "flex");
     document.getElementById("student-menu-profile").style.display = "none";
+    if (adminAttType) adminAttType.style.display = "flex"; // Admin controls event/internship
     document.getElementById("mode-flag-badge").innerText = "ADMINISTRATION INSTANCE";
     triggerNavigationTabChange("dashboard-section");
   } else if (role === "STAFF") {
     adminMenuOpts.forEach(el => el.style.display = "none");
     staffMenuOpts.forEach(el => el.style.display = "flex");
     document.getElementById("student-menu-profile").style.display = "none";
+    if (adminAttType) adminAttType.style.display = "none"; // Hide event/internship from staff
     document.getElementById("mode-flag-badge").innerText = "FACULTY PORTAL";
     triggerNavigationTabChange("staff-attendance-section");
   } else if (role === "STUDENT") {
@@ -296,13 +298,15 @@ function refreshFormDropdownLists() {
   populateSelectControl("att-class-select", classList, 0, 1);
   populateSelectControl("att-subject-select", subjectList, 0, 1);
 
-  // Dynamic 7 periods parsing control mapping
   for (let hourIdx = 1; hourIdx <= 7; hourIdx++) {
     populateSelectControl(`tt-sub-h${hourIdx}`, subjectList, 0, 1, "FREE PERIOD");
     populateSelectControl(`tt-staff1-h${hourIdx}`, staffList, 0, 1, "PRIMARY STAFF");
     populateSelectControl(`tt-staff2-h${hourIdx}`, staffList, 0, 1, "CO-STAFF A (OPTIONAL)");
     populateSelectControl(`tt-staff3-h${hourIdx}`, staffList, 0, 1, "CO-STAFF B (OPTIONAL)");
   }
+
+  // Filter attendance dropdowns immediately if Staff is logged in
+  filterSubjectsByAssignedStaff();
 }
 
 function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, defaultAlternativeText = null) {
@@ -321,6 +325,69 @@ function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, 
     opt.text = `${row[valueColIndex]} - ${row[textColIndex]}`;
     selectNode.appendChild(opt);
   });
+}
+
+// Staff dynamic portal reflection helper
+function filterSubjectsByAssignedStaff() {
+  const classSelect = document.getElementById("att-class-select");
+  const subjectSelect = document.getElementById("att-subject-select");
+  if (!classSelect || !subjectSelect) return;
+
+  const selectedClass = classSelect.value;
+  const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
+  const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+
+  // Default behavior for Admin (No filter required)
+  if (activeUserSession.role === "ADMIN") {
+    populateSelectControl("att-subject-select", subjectList, 0, 1);
+    return;
+  }
+
+  // Active Staff portal filtering logic
+  const staffName = activeUserSession.name; 
+  if (!selectedClass) {
+    subjectSelect.innerHTML = `<option value="">-- Choose Class First --</option>`;
+    return;
+  }
+
+  // Query timetable to find subjects mapped to this staff in selected class
+  let assignedSubjectCodes = [];
+  ttList.forEach(row => {
+    if (row[0] === selectedClass) {
+      for (let i = 2; i <= 8; i++) {
+        let cellVal = row[i];
+        if (cellVal && cellVal.includes("|")) {
+          let [sub, staff] = cellVal.split("|");
+          if (staff.includes(staffName)) {
+            assignedSubjectCodes.push(sub);
+          }
+        }
+      }
+    }
+  });
+
+  // Unique list of assigned subject codes
+  assignedSubjectCodes = [...new Set(assignedSubjectCodes)];
+
+  // Populate only assigned subjects for this faculty
+  const filteredSubjects = subjectList.filter(s => assignedSubjectCodes.includes(s[0]));
+  populateSelectControl("att-subject-select", filteredSubjects, 0, 1);
+
+  if (filteredSubjects.length === 0) {
+    subjectSelect.innerHTML = `<option value="">No Subjects Assigned for you in this class</option>`;
+  }
+}
+
+// Toggle subject select dropdown if Admin chooses Event / Internship Attendance
+function handleAttendanceCategoryToggle() {
+  const category = document.getElementById("att-category-select").value;
+  const subjectFieldContainer = document.getElementById("subject-field-container");
+  
+  if (category === "EVENT" || category === "INTERNSHIP") {
+    if (subjectFieldContainer) subjectFieldContainer.style.display = "none";
+  } else {
+    if (subjectFieldContainer) subjectFieldContainer.style.display = "flex";
+  }
 }
 
 // 8. CRUD SAVE GATEWAY & VALIDATION
@@ -493,14 +560,12 @@ function saveTimetableRecord() {
   }
 
   let dynamicPayload = [classId, targetDay];
-  // 7 Periods validation mapping logic
   for (let hr = 1; hr <= 7; hr++) {
     const subVal = document.getElementById(`tt-sub-h${hr}`).value || "FREE PERIOD";
     const staffVal1 = document.getElementById(`tt-staff1-h${hr}`).value || "";
     const staffVal2 = document.getElementById(`tt-staff2-h${hr}`).value || "";
     const staffVal3 = document.getElementById(`tt-staff3-h${hr}`).value || "";
     
-    // Joint staff names parsing via custom array filtering
     let combinedStaffs = [staffVal1, staffVal2, staffVal3].filter(s => s !== "").join(" + ");
     if(!combinedStaffs) combinedStaffs = "NO FACULTY ASSIGNED";
 
@@ -533,7 +598,6 @@ function renderTimetableGridDisplay() {
   const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 
-  // Custom 7 Period Headers Map Structure matching uploaded image timings
   const timeLabels = [
     "08:45-09:45\n(Period 1)", "09:45-10:45\n(Period 2)", "10:45-11:00\n(BREAK)",
     "11:00-12:00\n(Period 3)", "12:00-01:00\n(Period 4)", "01:00-02:00\n(LUNCH)",
@@ -552,9 +616,7 @@ function renderTimetableGridDisplay() {
     let mappedDayData = ttList.find(row => row[0] === classId && row[1] === dayName);
     
     let periodTrackingCounter = 1;
-    // 1 to 10 iterations mapping intervals 
     for (let currentSlot = 1; currentSlot <= 10; currentSlot++) {
-      // Slot 3 is short morning break
       if (currentSlot === 3) {
         let breakCell = document.createElement("div");
         breakCell.className = "tt-cell tt-break";
@@ -562,7 +624,6 @@ function renderTimetableGridDisplay() {
         gridContainer.appendChild(breakCell);
         continue;
       }
-      // Slot 6 is Lunch Interval
       if (currentSlot === 6) {
         let lunchBreak = document.createElement("div");
         lunchBreak.className = "tt-cell tt-break";
@@ -570,7 +631,6 @@ function renderTimetableGridDisplay() {
         gridContainer.appendChild(lunchBreak);
         continue;
       }
-      // Slot 8 is short afternoon break
       if (currentSlot === 8) {
         let breakCell = document.createElement("div");
         breakCell.className = "tt-cell tt-break";
@@ -603,20 +663,35 @@ function createHeaderCell(text) {
   return cell;
 }
 
-// 11. FACULTY ATTENDANCE UTILITY MODULE - 26 STUDENTS BULK LOGIC OPTIMIZATION
+// 11. FACULTY ATTENDANCE UTILITY MODULE
 async function saveFacultyAttendanceRegister() {
   const classId = document.getElementById("att-class-select").value;
   const activeDate = document.getElementById("att-date-picker").value;
-  const activeSub = document.getElementById("att-subject-select").value;
-  const entriesBody = document.getElementById("register-entries");
+  
+  // High-Priority Admin Specific Event & Internship Custom Setup Check
+  const attCategorySelect = document.getElementById("att-category-select");
+  const currentCategory = attCategorySelect ? attCategorySelect.value : "REGULAR";
+  
+  let activeSub = "";
+  if (currentCategory === "REGULAR") {
+    activeSub = document.getElementById("att-subject-select").value;
+    if (!activeSub) {
+      alert("Please select a subject!");
+      return;
+    }
+  } else {
+    // Save under the respective Event/Internship tag for cleaner tracking
+    activeSub = currentCategory; 
+  }
 
+  const entriesBody = document.getElementById("register-entries");
   if (!entriesBody) return;
+
   const buttons = entriesBody.querySelectorAll(".att-status-btn");
   let logs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
 
   setGlobalSyncState(true);
 
-  // Simultaneous operations resolution logic
   for (let btn of buttons) {
     let studentId = btn.id.replace("att-btn-", "");
     let capturedStatus = btn.getAttribute("data-status");
@@ -629,26 +704,37 @@ async function saveFacultyAttendanceRegister() {
     if (matchIdx > -1) logs[matchIdx] = payload;
     else logs.push(payload);
 
-    // sequential data transfer prevents network request skips
     await syncWithGoogleSheet("Daily_Class_Attendance", payload, SYSTEM_SCHEMA["DAILY_ATTENDANCE"], "CREATE");
   }
 
   localStorage.setItem("DAILY_ATTENDANCE", JSON.stringify(logs));
   setGlobalSyncState(false);
-  alert("All 26 Student Records Updated and Synchronized without data leaks!");
+  alert("All student attendance records updated and synchronized!");
 }
 
 function generateAttendanceRegisterForm() {
   const classId = document.getElementById("att-class-select").value;
   const activeDate = document.getElementById("att-date-picker").value;
-  const activeSub = document.getElementById("att-subject-select").value;
-  const listContainer = document.getElementById("att-students-list-view");
+  
+  const attCategorySelect = document.getElementById("att-category-select");
+  const currentCategory = attCategorySelect ? attCategorySelect.value : "REGULAR";
 
-  if (!classId || !activeDate || !activeSub) {
-    alert("Select structural targets first!");
-    return;
+  let activeSub = "";
+  if (currentCategory === "REGULAR") {
+    activeSub = document.getElementById("att-subject-select").value;
+    if (!classId || !activeDate || !activeSub) {
+      alert("Select structural targets first!");
+      return;
+    }
+  } else {
+    activeSub = currentCategory;
+    if (!classId || !activeDate) {
+      alert("Select Class and Date targets first!");
+      return;
+    }
   }
 
+  const listContainer = document.getElementById("att-students-list-view");
   listContainer.innerHTML = "";
   const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
   const classStudents = studentsList.filter(s => s[2] === classId);
