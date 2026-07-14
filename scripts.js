@@ -12,10 +12,11 @@ const SYSTEM_SCHEMA = {
   MASTER_CLASSES: ["ClassID", "ClassName", "CourseCode", "Department", "RecordID"],
   MASTER_SUBJECTS: ["SubjectCode", "SubjectName", "CourseCode", "Department", "RecordID"],
   MASTER_STAFFS: ["StaffID", "StaffName", "Department", "Contact", "RecordID"],
+  // REGISTERING NEW SCHEMA TABLE FOR ALLOCATING SUBJECTS TO STAFF members
+  MASTER_ALLOCATIONS: ["StaffID", "ClassID", "SubjectCode", "RecordID"],
   MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "Status", "DOB", "Age", "PrimaryContact", "SecondaryContact", "Std10th", "Std12th", "Accommodation", "HostelName", "RoomNo", "Address", "PhotoURL", "RecordID"],
   CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "RecordID"], 
   DAILY_ATTENDANCE: ["Date", "SubjectCode", "ClassID", "StudentID", "Status", "MarkedBy", "RecordID"]
-  MASTER_ALLOCATIONS: ["AllocationID", "StaffID", "ClassID", "SubjectCode", "RecordID"],
 };
 
 // 3. INTERNAL RUNTIME MEMORY
@@ -27,6 +28,7 @@ let editingRowIndices = {
   MASTER_CLASSES: -1,
   MASTER_SUBJECTS: -1,
   MASTER_STAFFS: -1,
+  MASTER_ALLOCATIONS: -1,
   MASTER_STUDENTS: -1,
   CLASS_TIMETABLES: -1,
   DAILY_ATTENDANCE: -1
@@ -185,6 +187,7 @@ function sheetTabForKey(key, optionalRowData = null) {
     MASTER_CLASSES: "Master_Classes",
     MASTER_SUBJECTS: "Master_Subjects",
     MASTER_STAFFS: "Master_Staffs",
+    MASTER_ALLOCATIONS: "Master_Allocations", // Google Sheet tab name for allocations
     MASTER_STUDENTS: "Master_Students",
     CLASS_TIMETABLES: "Class_Timetables",
     DAILY_ATTENDANCE: "Daily_Class_Attendance"
@@ -299,11 +302,16 @@ function refreshFormDropdownLists() {
   populateSelectControl("att-class-select", classList, 0, 1);
   populateSelectControl("att-subject-select", subjectList, 0, 1);
 
+  // New Subject Allocation dynamic bindings
+  populateSelectControl("alloc-staff-select", staffList, 1, 0); // Maps staff name/ID
+  populateSelectControl("alloc-class-select", classList, 0, 1);
+  populateSelectControl("alloc-sub-select", subjectList, 0, 1);
+
   for (let hourIdx = 1; hourIdx <= 7; hourIdx++) {
     populateSelectControl(`tt-sub-h${hourIdx}`, subjectList, 0, 1, "FREE PERIOD");
-    populateSelectControl(`tt-staff1-h${hourIdx}`, staffList, 0, 1, "PRIMARY STAFF");
-    populateSelectControl(`tt-staff2-h${hourIdx}`, staffList, 0, 1, "CO-STAFF A (OPTIONAL)");
-    populateSelectControl(`tt-staff3-h${hourIdx}`, staffList, 0, 1, "CO-STAFF B (OPTIONAL)");
+    populateSelectControl(`tt-staff1-h${hourIdx}`, staffList, 1, 0, "PRIMARY STAFF");
+    populateSelectControl(`tt-staff2-h${hourIdx}`, staffList, 1, 0, "CO-STAFF A (OPTIONAL)");
+    populateSelectControl(`tt-staff3-h${hourIdx}`, staffList, 1, 0, "CO-STAFF B (OPTIONAL)");
   }
 
   // Filter attendance dropdowns immediately if Staff is logged in
@@ -336,7 +344,7 @@ function filterSubjectsByAssignedStaff() {
 
   const selectedClass = classSelect.value;
   const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
-  const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  const allocationsList = JSON.parse(localStorage.getItem("MASTER_ALLOCATIONS")) || [];
 
   // Default behavior for Admin (No filter required)
   if (activeUserSession.role === "ADMIN") {
@@ -344,26 +352,18 @@ function filterSubjectsByAssignedStaff() {
     return;
   }
 
-  // Active Staff portal filtering logic
+  // Active Staff portal filtering logic based on Admin's Allocation ledger
   const staffName = activeUserSession.name; 
   if (!selectedClass) {
     subjectSelect.innerHTML = `<option value="">-- Choose Class First --</option>`;
     return;
   }
 
-  // Query timetable to find subjects mapped to this staff in selected class
+  // Retrieve assigned subjects allocated specifically to this staff name inside MASTER_ALLOCATIONS[cite: 12]
   let assignedSubjectCodes = [];
-  ttList.forEach(row => {
-    if (row[0] === selectedClass) {
-      for (let i = 2; i <= 8; i++) {
-        let cellVal = row[i];
-        if (cellVal && cellVal.includes("|")) {
-          let [sub, staff] = cellVal.split("|");
-          if (staff.includes(staffName)) {
-            assignedSubjectCodes.push(sub);
-          }
-        }
-      }
+  allocationsList.forEach(row => {
+    if (row[1] === selectedClass && row[0] === staffName) {
+      assignedSubjectCodes.push(row[2]);
     }
   });
 
@@ -471,6 +471,7 @@ function renderAllTables() {
   renderDatasetToTable("class-table-body", "MASTER_CLASSES", [0, 1, 2], ["Class ID", "Class Name", "Course Code"]);
   renderDatasetToTable("subject-table-body", "MASTER_SUBJECTS", [0, 1, 2, 3], ["Subject Code", "Subject Name", "Course Code", "Dept"]);
   renderDatasetToTable("staff-table-body", "MASTER_STAFFS", [0, 1, 2, 3], ["Staff ID", "Name", "Dept", "Contact"]);
+  renderDatasetToTable("allocation-table-body", "MASTER_ALLOCATIONS", [0, 1, 2], ["Faculty", "Class ID", "Subject Code"]);
   renderDatasetToTable("student-table-body", "MASTER_STUDENTS", [0, 1, 2, 3, 4, 5, 6, 11], ["ID", "Name", "Class", "Course", "Status", "DOB", "Age", "Accom"]);
 }
 
@@ -527,6 +528,7 @@ function getSearchFilterText(tbodyId) {
     "class-table-body": "search-class",
     "subject-table-body": "search-subject",
     "staff-table-body": "search-staff",
+    "allocation-table-body": "search-allocations",
     "student-table-body": "search-student"
   };
   const el = document.getElementById(searchInputsMap[tbodyId]);
@@ -544,6 +546,7 @@ function getInputIdsForTableKey(tblKey) {
     MASTER_CLASSES: ["cls-id", "cls-name", "cls-course-select", "cls-dept"],
     MASTER_SUBJECTS: ["sub-code", "sub-name", "sub-course-select", "sub-dept"],
     MASTER_STAFFS: ["stf-id", "stf-name", "stf-dept", "stf-contact"],
+    MASTER_ALLOCATIONS: ["alloc-staff-select", "alloc-class-select", "alloc-sub-select"],
     MASTER_STUDENTS: ["std-id", "std-name", "std-class-select", "std-course-select", "std-status", "std-dob", "std-age", "std-primary", "std-secondary", "std-10th", "std-12th", "std-accom", "std-hostel-name", "std-room", "std-address", "std-photo"],
     CLASS_TIMETABLES: ["tt-class-select", "tt-day-select"]
   };
