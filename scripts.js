@@ -15,7 +15,8 @@ const SYSTEM_SCHEMA = {
   MASTER_ALLOCATIONS: ["StaffID", "ClassID", "SubjectCode", "RecordID"],
   MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "Status", "DOB", "Age", "PrimaryContact", "SecondaryContact", "Std10th", "Std12th", "Accommodation", "HostelName", "RoomNo", "Address", "PhotoURL", "RecordID"],
   CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "RecordID"], 
-  DAILY_ATTENDANCE: ["Date", "SubjectCode", "ClassID", "StudentID", "Status", "MarkedBy", "RecordID"]
+  DAILY_ATTENDANCE: ["Date", "SubjectCode", "ClassID", "StudentID", "Status", "MarkedBy", "RecordID"],
+  STUDENT_MARKS: ["StudentID", "SubjectCode", "CIA1", "CIA2", "CIA3", "Assignment", "Attendance", "Semester", "Total", "RecordID"]
 };
 
 // 3. INTERNAL RUNTIME MEMORY
@@ -30,7 +31,8 @@ let editingRowIndices = {
   MASTER_ALLOCATIONS: -1,
   MASTER_STUDENTS: -1,
   CLASS_TIMETABLES: -1,
-  DAILY_ATTENDANCE: -1
+  DAILY_ATTENDANCE: -1,
+  STUDENT_MARKS: -1
 };
 
 // 4. ON SYSTEM LOAD INITIALIZER
@@ -197,7 +199,8 @@ function sheetTabForKey(key, optionalRowData = null) {
     MASTER_ALLOCATIONS: "Master_Allocations", 
     MASTER_STUDENTS: "Master_Students",
     CLASS_TIMETABLES: "Class_Timetables",
-    DAILY_ATTENDANCE: "Daily_Class_Attendance"
+    DAILY_ATTENDANCE: "Daily_Class_Attendance",
+    STUDENT_MARKS: "Student_Marks"
   };
   return map[key] || "";
 }
@@ -247,14 +250,14 @@ function applyAuthorizationRules(role, name) {
 
   if (role === "ADMIN") {
     adminMenuOpts.forEach(el => el.style.display = "flex");
-    staffMenuOpts.forEach(el => el.style.display = "none"); // Admin has admin tabs
+    staffMenuOpts.forEach(el => el.style.display = "none"); 
     document.getElementById("student-menu-profile").style.display = "none";
     if (adminAttType) adminAttType.style.display = "flex"; 
     document.getElementById("mode-flag-badge").innerText = "ADMINISTRATION INSTANCE";
     triggerNavigationTabChange("dashboard-section");
   } else if (role === "STAFF") {
     adminMenuOpts.forEach(el => el.style.display = "none");
-    staffMenuOpts.forEach(el => el.style.display = "flex"); // Staff dashboard and Attendance Entry tabs
+    staffMenuOpts.forEach(el => el.style.display = "flex"); 
     document.getElementById("student-menu-profile").style.display = "none";
     if (adminAttType) adminAttType.style.display = "none"; 
     document.getElementById("mode-flag-badge").innerText = "FACULTY PORTAL";
@@ -308,6 +311,7 @@ function refreshFormDropdownLists() {
   populateSelectControl("std-class-select", classList, 0, 1);
   populateSelectControl("tt-class-select", classList, 0, 1);
   populateSelectControl("att-class-select", classList, 0, 1);
+  populateSelectControl("marks-class-select", classList, 0, 1);
 
   populateSelectControl("alloc-staff-select", staffList, 1, 0); 
   populateSelectControl("alloc-class-select", classList, 0, 1);
@@ -631,7 +635,6 @@ function renderStaffDashboardConsole() {
   const timetableList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
   
-  // Custom tracking logic base date 
   const activeDate = document.getElementById("att-date-picker")?.value || new Date().toISOString().split('T')[0];
 
   const profile = staffList.find(s => s[1] === staffName);
@@ -666,7 +669,6 @@ function renderStaffDashboardConsole() {
             let [subToken, staffToken] = fieldVal.split("|");
             if (subToken.trim() === targetSubjectCode && staffToken.includes(staffName)) {
               
-              // Attendance completed or conflict checks inside matching database logs
               let checkKey = `${targetSubjectCode}_P${hr}`;
               let attendanceRecord = attendanceLogs.find(log => 
                 log[0] === activeDate && 
@@ -748,7 +750,6 @@ function filterSubjectsByAssignedStaff() {
   `;
 
   assignedSubjects.forEach(sub => {
-    // Exact subject overall update checking logs
     const isAlreadyMarkedByCoStaff = attendanceLogs.some(log => 
       log[0] === activeDate && 
       log[1].startsWith(sub[0]) && 
@@ -848,7 +849,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
       let markerName = alreadyMarkedLog[5];
       let isByMe = markerName === staffName;
       
-      // COMPLETED status-la iruntha disabled option-um, not-allowed cursor-um applied aagum
       html += `
         <button type="button" class="action-btn" disabled style="background:#059669; min-width: 150px; text-align:center; opacity: 0.75; cursor: not-allowed;">
           Period ${p} <br/>
@@ -857,7 +857,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
           </span>
         </button>`;
     } else {
-      // PENDING status-la iruntha normal-ah click panna mudiyum
       html += `
         <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:var(--sky-600); min-width: 150px; text-align:center;">
           Period ${p} <br/>
@@ -987,7 +986,6 @@ async function saveFacultyAttendanceRegister() {
   setGlobalSyncState(false);
   alert("Success: Verification sheet successfully updated and synchronized!");
   
-  // Dashboard and dynamic lists components sync update
   renderStaffDashboardConsole();
   filterSubjectsByAssignedStaff();
 }
@@ -1055,4 +1053,171 @@ function renderStudentSelfProfileViewer() {
 
 function handleAttendanceCategoryToggle() {
   // Utility toggle helper
+}
+
+// 14. NEW MODULE: DYNAMIC MARKS CALCULATION & PROCESSING ENGINE
+function filterSubjectsForMarksEntry() {
+  const classId = document.getElementById("marks-class-select").value;
+  const subjectSelect = document.getElementById("marks-subject-select");
+  if (!subjectSelect) return;
+  subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+
+  if (!classId) return;
+
+  const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
+  const allocationsList = JSON.parse(localStorage.getItem("MASTER_ALLOCATIONS")) || [];
+  
+  let assignedSubjects = [];
+  if (activeUserSession.role === "ADMIN") {
+    assignedSubjects = subjectList;
+  } else {
+    const staffName = activeUserSession.name;
+    const codes = allocationsList
+      .filter(row => row[1] === classId && row[0] === staffName)
+      .map(row => row[2]);
+    assignedSubjects = subjectList.filter(s => codes.includes(s[0]));
+  }
+
+  assignedSubjects.forEach(sub => {
+    let opt = document.createElement("option");
+    opt.value = sub[0];
+    opt.text = `${sub[0]} - ${sub[1]}`;
+    subjectSelect.appendChild(opt);
+  });
+}
+
+function loadMarksEntrySheet() {
+  const classId = document.getElementById("marks-class-select").value;
+  const subjectCode = document.getElementById("marks-subject-select").value;
+  const container = document.getElementById("marks-entry-container");
+
+  if (!classId || !subjectCode) {
+    alert("Please select both Class and Subject!");
+    return;
+  }
+
+  const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
+  const marksLogs = JSON.parse(localStorage.getItem("STUDENT_MARKS")) || [];
+  const classStudents = studentsList.filter(s => s[2] === classId);
+
+  if (classStudents.length === 0) {
+    container.innerHTML = "<p style='padding: 15px;'>No student profiles registered in this class sector.</p>";
+    return;
+  }
+
+  let html = `
+    <table class="att-list-table">
+      <thead>
+        <tr>
+          <th>Roll No</th>
+          <th>Student Name</th>
+          <th>CIA 1 (50)</th>
+          <th>CIA 2 (50)</th>
+          <th>CIA 3 (50)</th>
+          <th>Assignment (5)</th>
+          <th>Attendance (5)</th>
+          <th>Semester (100)</th>
+          <th>Grand Total (100)</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  classStudents.forEach(student => {
+    let existingRecord = marksLogs.find(m => m[0] === student[0] && m[1] === subjectCode);
+    
+    let cia1 = existingRecord ? existingRecord[2] : "0";
+    let cia2 = existingRecord ? existingRecord[3] : "0";
+    let cia3 = existingRecord ? existingRecord[4] : "0";
+    let assign = existingRecord ? existingRecord[5] : "0";
+    let att = existingRecord ? existingRecord[6] : "0";
+    let sem = existingRecord ? existingRecord[7] : "0";
+    let total = existingRecord ? existingRecord[8] : "0.0";
+
+    html += `
+      <tr data-student-id="${student[0]}">
+        <td><strong>${student[0]}</strong></td>
+        <td>${student[1]}</td>
+        <td><input type="number" class="marks-input style-box" style="width:65px; padding:6px;" min="0" max="50" value="${cia1}" oninput="calculateRowMarkRuntime(this)"></td>
+        <td><input type="number" class="marks-input style-box" style="width:65px; padding:6px;" min="0" max="50" value="${cia2}" oninput="calculateRowMarkRuntime(this)"></td>
+        <td><input type="number" class="marks-input style-box" style="width:65px; padding:6px;" min="0" max="50" value="${cia3}" oninput="calculateRowMarkRuntime(this)"></td>
+        <td><input type="number" class="marks-input style-box" style="width:65px; padding:6px;" min="0" max="5" value="${assign}" oninput="calculateRowMarkRuntime(this)"></td>
+        <td><input type="number" class="marks-input style-box" style="width:65px; padding:6px;" min="0" max="5" value="${att}" oninput="calculateRowMarkRuntime(this)"></td>
+        <td><input type="number" class="marks-input style-box" style="width:65px; padding:6px;" min="0" max="100" value="${sem}" oninput="calculateRowMarkRuntime(this)"></td>
+        <td style="font-weight:700; color:var(--sky-600);" class="row-grand-total">${total}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+function calculateRowMarkRuntime(inputNode) {
+  const row = inputNode.closest("tr");
+  const inputs = row.querySelectorAll(".marks-input");
+  
+  let cia1 = parseFloat(inputs[0].value) || 0;
+  let cia2 = parseFloat(inputs[1].value) || 0;
+  let cia3 = parseFloat(inputs[2].value) || 0;
+  let assignment = parseFloat(inputs[3].value) || 0;
+  let attendance = parseFloat(inputs[4].value) || 0;
+  let semester = parseFloat(inputs[5].value) || 0;
+
+  // Best of two calculations from CIA 1, 2, 3
+  let ciaArr = [cia1, cia2, cia3].sort((a, b) => b - a);
+  let bestOfTwoTotal = ciaArr[0] + ciaArr[1]; // Out of 100 max
+  
+  // Convert 100 matrix down to 40 marks component weightage
+  let scaledCia = (bestOfTwoTotal / 100) * 40;
+  
+  // Convert 100 max semester mark down to 50 scale component weightage
+  let scaledSemester = (semester / 100) * 50;
+
+  // Final internal aggregate score summary tracking variables
+  let grandTotal = scaledCia + assignment + attendance + scaledSemester;
+
+  row.querySelector(".row-grand-total").innerText = grandTotal.toFixed(1);
+}
+
+async function saveStudentsMarksRegister() {
+  const subjectCode = document.getElementById("marks-subject-select").value;
+  const container = document.getElementById("marks-entry-container");
+  const rows = container.querySelectorAll("tbody tr");
+
+  if (!subjectCode || rows.length === 0) {
+    alert("No active marks sheet generated or populated to save!");
+    return;
+  }
+
+  let marksLogs = JSON.parse(localStorage.getItem("STUDENT_MARKS")) || [];
+  setGlobalSyncState(true);
+
+  for (let row of rows) {
+    let studentId = row.getAttribute("data-student-id");
+    const inputs = row.querySelectorAll(".marks-input");
+    
+    let cia1 = inputs[0].value || "0";
+    let cia2 = inputs[1].value || "0";
+    let cia3 = inputs[2].value || "0";
+    let assign = inputs[3].value || "0";
+    let att = inputs[4].value || "0";
+    let sem = inputs[5].value || "0";
+    let total = row.querySelector(".row-grand-total").innerText;
+
+    let matchIdx = marksLogs.findIndex(m => m[0] === studentId && m[1] === subjectCode);
+    let payload = [studentId, subjectCode, cia1, cia2, cia3, assign, att, sem, total];
+    
+    let recordId = matchIdx > -1 ? marksLogs[matchIdx][marksLogs[matchIdx].length - 1] : "REC-MRK-" + Date.now() + "-" + Math.floor(Math.random()*1000);
+    payload.push(recordId);
+
+    if (matchIdx > -1) marksLogs[matchIdx] = payload;
+    else marksLogs.push(payload);
+
+    await syncWithGoogleSheet("Student_Marks", payload, SYSTEM_SCHEMA["STUDENT_MARKS"], "CREATE");
+  }
+
+  localStorage.setItem("STUDENT_MARKS", JSON.stringify(marksLogs));
+  setGlobalSyncState(false);
+  alert("Success: Student marks successfully computed and synchronized!");
 }
