@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // 1. DYNAMIC DEPLOYMENT CONFIGURATIONS
-const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyZJQZVHj3bDl8aHxSxJiDCLN25LnrnG7DtVP9uYYBmkJwLpwLS_VwYFQ7RfPtqeu-L/exec"; // Replace with your Google Apps Script Deployment Web App URL
+const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyZJQZVHj3bDl8aHxSxJiDCLN25LnrnG7DtVP9uYYBmkJwLpwLS_VwYFQ7RfPtqeu-L/exec"; 
 
 // 2. RUNTIME DATABASE STATE SCHEMA
 const SYSTEM_SCHEMA = {
@@ -12,7 +12,7 @@ const SYSTEM_SCHEMA = {
   MASTER_CLASSES: ["ClassID", "ClassName", "CourseCode", "Department", "RecordID"],
   MASTER_SUBJECTS: ["SubjectCode", "SubjectName", "CourseCode", "Department", "RecordID"],
   MASTER_STAFFS: ["StaffID", "StaffName", "Department", "Contact", "RecordID"],
-  MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "DOB", "Contact", "RecordID"],
+  MASTER_STUDENTS: ["StudentID", "StudentName", "ClassID", "CourseCode", "Status", "DOB", "Age", "PrimaryContact", "SecondaryContact", "Std10th", "Std12th", "Accommodation", "HostelName", "RoomNo", "Address", "PhotoURL", "RecordID"],
   CLASS_TIMETABLES: ["ClassID", "Day", "Hour_1", "Hour_2", "Hour_3", "Hour_4", "Hour_5", "Hour_6", "Hour_7", "Hour_8", "Hour_9", "Hour_10", "RecordID"],
   DAILY_ATTENDANCE: ["Date", "SubjectCode", "ClassID", "StudentID", "Status", "MarkedBy", "RecordID"]
 };
@@ -38,7 +38,6 @@ window.addEventListener("DOMContentLoaded", () => {
   autoLoginIfSessionExists();
 });
 
-// Setup LocalStorage with structure if empty
 function initializeLocalDatabases() {
   Object.keys(SYSTEM_SCHEMA).forEach(key => {
     if (!localStorage.getItem(key)) {
@@ -48,7 +47,6 @@ function initializeLocalDatabases() {
 }
 
 function setupGlobalEvents() {
-  // Navigation Menu Event Handlers
   const menuItems = document.querySelectorAll(".menu-item");
   menuItems.forEach(item => {
     item.addEventListener("click", () => {
@@ -64,7 +62,6 @@ function setupGlobalEvents() {
     });
   });
 
-  // Timetable Generator Dynamic Select Rules
   const ttClassSelect = document.getElementById("tt-class-select");
   if(ttClassSelect) {
     ttClassSelect.addEventListener("change", renderTimetableGridDisplay);
@@ -78,6 +75,36 @@ function autoLoginIfSessionExists() {
     activeUserSession = parsed;
     applyAuthorizationRules(parsed.role, parsed.name);
   }
+}
+
+// Runtime Calculators for Enrolment UI
+function calculateStudentAgeRuntime() {
+  const dobValue = document.getElementById("std-dob").value;
+  const ageInput = document.getElementById("std-age");
+  if(!dobValue || !ageInput) return;
+  
+  const birthDate = new Date(dobValue);
+  const today = new Date();
+  let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    calculatedAge--;
+  }
+  ageInput.value = calculatedAge >= 0 ? calculatedAge : 0;
+}
+
+function toggleHostelFieldsVisibility() {
+  const accommodationType = document.getElementById("std-accom").value;
+  const hostelFields = document.querySelectorAll(".hostel-conditional-field");
+  hostelFields.forEach(field => {
+    if(accommodationType === "Hostel") {
+      field.style.display = "flex";
+    } else {
+      field.style.display = "none";
+      const innerInput = field.querySelector("input");
+      if(innerInput) innerInput.value = ""; 
+    }
+  });
 }
 
 // 5. SECURE ENDPOINT SYNCHRONIZATION
@@ -114,11 +141,14 @@ function syncAllFromGoogleSheets() {
       });
       renderAllTables();
       refreshFormDropdownLists();
+      if(activeUserSession.role === "STUDENT") {
+        renderStudentSelfProfileViewer();
+      }
       alert("System database successfully synchronized and refreshed!");
     })
     .catch(err => {
       console.error(err);
-      alert("Connection failure with backend server. Check web app URL or sheet locks.");
+      alert("Connection failure with backend server. Check configurations.");
     })
     .finally(() => setGlobalSyncState(false));
 }
@@ -126,27 +156,23 @@ function syncAllFromGoogleSheets() {
 function syncWithGoogleSheet(sheetTab, payload, headers, action, recordId = "") {
   if (!DEPLOYMENT_WEB_APP_URL) return;
   
-  // Apps Script code-oda strict mapping-ku yetha madi variable names-ai mathiyachubro!
   const requestBody = {
-    tabName: sheetTab,       // Changed from sheetName to tabName
+    tabName: sheetTab,       
     action: action,
     payload: payload,
     headers: headers,
-    rowId: recordId          // Changed from recordId to rowId
+    rowId: recordId          
   };
 
-  // POST request fetch configuration optimized for Google Redirects
   fetch(DEPLOYMENT_WEB_APP_URL, {
     method: "POST",
-    mode: "cors",            // Changed from no-cors to cors for better handshake
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, // Apps Script accepts text/plain best in CORS
+    mode: "cors",            
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, 
     body: JSON.stringify(requestBody)
   })
   .then(res => res.json())
-  .then(resData => {
-     console.log("Cloud Engine Status:", resData);
-  })
-  .catch(err => console.warn("Google sheet background synchronization logging:", err));
+  .then(resData => { console.log("Cloud Engine Status:", resData); })
+  .catch(err => console.warn("Google sheet cloud pipeline log:", err));
 }
 
 function sheetTabForKey(key, optionalRowData = null) {
@@ -160,12 +186,7 @@ function sheetTabForKey(key, optionalRowData = null) {
     CLASS_TIMETABLES: "Class_Timetables",
     DAILY_ATTENDANCE: "Daily_Class_Attendance"
   };
-  let baseTab = map[key] || "";
-  if (key === "DAILY_ATTENDANCE" && optionalRowData) {
-    let classId = optionalRowData[2];
-    if (classId) return "Class_Att_" + classId;
-  }
-  return baseTab;
+  return map[key] || "";
 }
 
 // 6. ROLE CONFIGURATION GATEWAY
@@ -181,8 +202,6 @@ function handleSystemLogin() {
   }
 
   errorMsg.style.display = "none";
-
-  // Check if Master Users Database is present
   const users = JSON.parse(localStorage.getItem("MASTER_USERS")) || [];
   let userRecord = users.find(u => u[0] == uid && u[2] == pass);
 
@@ -191,9 +210,9 @@ function handleSystemLogin() {
     localStorage.setItem("ACTIVE_SESSION_CACHE", JSON.stringify(activeUserSession));
     applyAuthorizationRules(userRecord[3], userRecord[1]);
   } else if (uid === "admin" && pass === "admin") {
-    activeUserSession = { role: "ADMIN", uid: "admin", name: "System Adminstrator" };
+    activeUserSession = { role: "ADMIN", uid: "admin", name: "System Administrator" };
     localStorage.setItem("ACTIVE_SESSION_CACHE", JSON.stringify(activeUserSession));
-    applyAuthorizationRules("ADMIN", "System Adminstrator");
+    applyAuthorizationRules("ADMIN", "System Administrator");
   } else {
     errorMsg.innerText = "Authentication Failed: Invalid user credentials.";
     errorMsg.style.display = "block";
@@ -215,16 +234,19 @@ function applyAuthorizationRules(role, name) {
   if (role === "ADMIN") {
     adminMenuOpts.forEach(el => el.style.display = "flex");
     staffMenuOpts.forEach(el => el.style.display = "flex");
+    document.getElementById("student-menu-profile").style.display = "none";
     document.getElementById("mode-flag-badge").innerText = "ADMINISTRATION INSTANCE";
     triggerNavigationTabChange("dashboard-section");
   } else if (role === "STAFF") {
     adminMenuOpts.forEach(el => el.style.display = "none");
     staffMenuOpts.forEach(el => el.style.display = "flex");
+    document.getElementById("student-menu-profile").style.display = "none";
     document.getElementById("mode-flag-badge").innerText = "FACULTY PORTAL";
     triggerNavigationTabChange("staff-attendance-section");
   } else if (role === "STUDENT") {
     adminMenuOpts.forEach(el => el.style.display = "none");
     staffMenuOpts.forEach(el => el.style.display = "none");
+    document.getElementById("student-menu-profile").style.display = "flex";
     document.getElementById("mode-flag-badge").innerText = "STUDENT COUNSEL PORTAL";
     triggerNavigationTabChange("student-profile-section");
     renderStudentSelfProfileViewer();
@@ -237,19 +259,13 @@ function applyAuthorizationRules(role, name) {
 function triggerNavigationTabChange(tabId) {
   const menuItems = document.querySelectorAll(".menu-item");
   menuItems.forEach(item => {
-    if (item.getAttribute("data-target") === tabId) {
-      item.classList.add("active");
-    } else {
-      item.classList.remove("active");
-    }
+    if (item.getAttribute("data-target") === tabId) item.classList.add("active");
+    else item.classList.remove("active");
   });
   const sections = document.querySelectorAll(".tab-content");
   sections.forEach(s => {
-    if (s.id === tabId) {
-      s.classList.add("active");
-    } else {
-      s.classList.remove("active");
-    }
+    if (s.id === tabId) s.classList.add("active");
+    else s.classList.remove("active");
   });
 }
 
@@ -260,11 +276,6 @@ function handleLogout() {
   document.getElementById("global-header").style.display = "none";
   document.getElementById("main-sidebar").style.display = "none";
   document.getElementById("main-content-area").style.display = "none";
-  
-  // Clear input fields safely
-  document.getElementById("login-uid").value = "";
-  document.getElementById("login-pass").value = "";
-  document.getElementById("login-error").style.display = "none";
 }
 
 // 7. DROPDOWN SELECTION BUILDERS
@@ -277,14 +288,11 @@ function refreshFormDropdownLists() {
   populateSelectControl("cls-course-select", courseList, 0, 1);
   populateSelectControl("sub-course-select", courseList, 0, 1);
   populateSelectControl("std-course-select", courseList, 0, 1);
-
   populateSelectControl("std-class-select", classList, 0, 1);
   populateSelectControl("tt-class-select", classList, 0, 1);
   populateSelectControl("att-class-select", classList, 0, 1);
-
   populateSelectControl("att-subject-select", subjectList, 0, 1);
 
-  // Populate dynamic cells selectors inside timetable creator
   for (let hourIdx = 1; hourIdx <= 10; hourIdx++) {
     populateSelectControl(`tt-sub-h${hourIdx}`, subjectList, 0, 1, "FREE PERIOD");
     populateSelectControl(`tt-staff-h${hourIdx}`, staffList, 0, 1, "NO FACULTY ASSIGNED");
@@ -296,17 +304,10 @@ function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, 
   if (!selectNode) return;
   selectNode.innerHTML = "";
 
-  if (defaultAlternativeText) {
-    let opt = document.createElement("option");
-    opt.value = "";
-    opt.text = defaultAlternativeText;
-    selectNode.appendChild(opt);
-  } else {
-    let opt = document.createElement("option");
-    opt.value = "";
-    opt.text = `-- Select Option --`;
-    selectNode.appendChild(opt);
-  }
+  let opt = document.createElement("option");
+  opt.value = "";
+  opt.text = defaultAlternativeText ? defaultAlternativeText : `-- Select Option --`;
+  selectNode.appendChild(opt);
 
   dataset.forEach(row => {
     let opt = document.createElement("option");
@@ -321,36 +322,33 @@ function handleFormSubmission(tblKey, inputControlIds, resetFormElementId = null
   let valuesMatrix = JSON.parse(localStorage.getItem(tblKey)) || [];
   let formValues = inputControlIds.map(id => document.getElementById(id).value.trim());
 
-  if (formValues.some(val => val === "")) {
-    alert("Mandatory Fields Violation: Complete all input fields before saving.");
-    return;
+  // Conditional mandatory check: Ignore hostel properties if Dayscholar chosen
+  if (tblKey === "MASTER_STUDENTS" && document.getElementById("std-accom").value === "Dayscholar") {
+    // Fill placeholder positions for spreadsheet alignments
+    formValues[12] = ""; // Hostel name blank
+    formValues[13] = ""; // Room no blank
   }
 
-  let recordId = "";
+  // Base validation filter validation checks
   let activeIndex = editingRowIndices[tblKey];
+  let recordId = "";
 
   if (activeIndex > -1) {
-    // Record update scenario
     let targetRowData = valuesMatrix[activeIndex];
-    recordId = targetRowData[targetRowData.length - 1]; // Unique Row Key
+    recordId = targetRowData[targetRowData.length - 1]; 
     formValues.push(recordId);
     valuesMatrix[activeIndex] = formValues;
     editingRowIndices[tblKey] = -1;
 
     let targetTab = sheetTabForKey(tblKey, formValues);
-    if (targetTab) {
-      syncWithGoogleSheet(targetTab, formValues, SYSTEM_SCHEMA[tblKey], "UPDATE", recordId);
-    }
+    if (targetTab) syncWithGoogleSheet(targetTab, formValues, SYSTEM_SCHEMA[tblKey], "UPDATE", recordId);
   } else {
-    // New creation entry scenario
     recordId = "REC-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
     formValues.push(recordId);
     valuesMatrix.push(formValues);
 
     let targetTab = sheetTabForKey(tblKey, formValues);
-    if (targetTab) {
-      syncWithGoogleSheet(targetTab, formValues, SYSTEM_SCHEMA[tblKey], "CREATE");
-    }
+    if (targetTab) syncWithGoogleSheet(targetTab, formValues, SYSTEM_SCHEMA[tblKey], "CREATE");
   }
 
   localStorage.setItem(tblKey, JSON.stringify(valuesMatrix));
@@ -359,11 +357,7 @@ function handleFormSubmission(tblKey, inputControlIds, resetFormElementId = null
 
   if (resetFormElementId) {
     document.getElementById(resetFormElementId).reset();
-  }
-
-  // Handle specific action trigger loops
-  if (tblKey === "CLASS_TIMETABLES") {
-    renderTimetableGridDisplay();
+    if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
   }
 }
 
@@ -373,16 +367,13 @@ function handleUniversalEdit(tblKey, rowIdx, inputControlIds) {
   if (!targetRow) return;
 
   editingRowIndices[tblKey] = rowIdx;
-
   inputControlIds.forEach((id, idx) => {
     const inputControl = document.getElementById(id);
-    if (inputControl) {
-      inputControl.value = targetRow[idx] || "";
-    }
+    if (inputControl) inputControl.value = targetRow[idx] || "";
   });
 
-  // Highlight action state to user
-  alert("Row data loaded into the target inputs. Modify values and submit form to save changes.");
+  if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
+  alert("Row parameters successfully bound to UI editors! Edit and commit form.");
 }
 
 function handleUniversalDelete(tblKey, rowIdx) {
@@ -392,23 +383,11 @@ function handleUniversalDelete(tblKey, rowIdx) {
   let recordId = targetRowData[targetRowData.length - 1];
 
   let targetTab = sheetTabForKey(tblKey, targetRowData);
-  if (targetTab) {
-    syncWithGoogleSheet(targetTab, [], [], "DELETE", recordId);
-  }
+  if (targetTab) syncWithGoogleSheet(targetTab, [], [], "DELETE", recordId);
 
   valuesMatrix.splice(rowIdx, 1);
   localStorage.setItem(tblKey, JSON.stringify(valuesMatrix));
-
-  if (editingRowIndices[tblKey] === rowIdx) {
-    editingRowIndices[tblKey] = -1;
-  }
-
   renderAllTables();
-  refreshFormDropdownLists();
-  
-  if (tblKey === "CLASS_TIMETABLES") {
-    renderTimetableGridDisplay();
-  }
 }
 
 // 9. DYNAMIC GRID & TABLE RENDERERS
@@ -418,8 +397,7 @@ function renderAllTables() {
   renderDatasetToTable("class-table-body", "MASTER_CLASSES", [0, 1, 2], ["Class ID", "Class Name", "Course Code"]);
   renderDatasetToTable("subject-table-body", "MASTER_SUBJECTS", [0, 1, 2, 3], ["Subject Code", "Subject Name", "Course Code", "Dept"]);
   renderDatasetToTable("staff-table-body", "MASTER_STAFFS", [0, 1, 2, 3], ["Staff ID", "Name", "Dept", "Contact"]);
-  renderDatasetToTable("student-table-body", "MASTER_STUDENTS", [0, 1, 2, 3, 4, 5], ["Student ID", "Name", "Class ID", "Course", "DOB", "Contact"]);
-  renderDatasetToTable("timetable-table-body", "CLASS_TIMETABLES", [0, 1], ["Class ID", "Day"]);
+  renderDatasetToTable("student-table-body", "MASTER_STUDENTS", [0, 1, 2, 3, 4, 5, 6, 11], ["ID", "Name", "Class", "Course", "Status", "DOB", "Age", "Accom"]);
 }
 
 function renderDatasetToTable(tbodyId, tblKey, displayColIndices, headerLabels) {
@@ -431,21 +409,18 @@ function renderDatasetToTable(tbodyId, tblKey, displayColIndices, headerLabels) 
   const searchFilterVal = getSearchFilterText(tbodyId);
 
   rawDataset.forEach((row, originalRowIndex) => {
-    // Perform live text filtering match checks
     if (searchFilterVal) {
       let containsMatchStr = row.some(col => String(col).toLowerCase().includes(searchFilterVal));
       if (!containsMatchStr) return;
     }
 
     let tr = document.createElement("tr");
-
     displayColIndices.forEach(colIdx => {
       let td = document.createElement("td");
       td.innerText = row[colIdx] || "";
       tr.appendChild(td);
     });
 
-    // Generate Context Control Action Buttons
     let actionTd = document.createElement("td");
     actionTd.className = "actions-cell-flex";
 
@@ -453,7 +428,6 @@ function renderDatasetToTable(tbodyId, tblKey, displayColIndices, headerLabels) 
     editBtn.className = "btn-table-edit";
     editBtn.innerHTML = '<i class="fas fa-edit"></i> Edit';
     editBtn.addEventListener("click", () => {
-      // Map and extract targeted dynamic inputs based on UI key layout
       let targetInputIds = getInputIdsForTableKey(tblKey);
       handleUniversalEdit(tblKey, originalRowIndex, targetInputIds);
     });
@@ -468,7 +442,6 @@ function renderDatasetToTable(tbodyId, tblKey, displayColIndices, headerLabels) 
     actionTd.appendChild(editBtn);
     actionTd.appendChild(delBtn);
     tr.appendChild(actionTd);
-
     tbodyNode.appendChild(tr);
   });
 }
@@ -480,12 +453,9 @@ function getSearchFilterText(tbodyId) {
     "class-table-body": "search-class",
     "subject-table-body": "search-subject",
     "staff-table-body": "search-staff",
-    "student-table-body": "search-student",
-    "timetable-table-body": "search-timetable"
+    "student-table-body": "search-student"
   };
-  const inputElId = searchInputsMap[tbodyId];
-  if (!inputElId) return "";
-  const el = document.getElementById(inputElId);
+  const el = document.getElementById(searchInputsMap[tbodyId]);
   return el ? el.value.trim().toLowerCase() : "";
 }
 
@@ -500,15 +470,8 @@ function getInputIdsForTableKey(tblKey) {
     MASTER_CLASSES: ["cls-id", "cls-name", "cls-course-select", "cls-dept"],
     MASTER_SUBJECTS: ["sub-code", "sub-name", "sub-course-select", "sub-dept"],
     MASTER_STAFFS: ["stf-id", "stf-name", "stf-dept", "stf-contact"],
-    MASTER_STUDENTS: ["std-id", "std-name", "std-class-select", "std-course-select", "std-dob", "std-contact"],
-    CLASS_TIMETABLES: [
-      "tt-class-select", "tt-day-select",
-      "tt-sub-h1", "tt-staff-h1", "tt-sub-h2", "tt-staff-h2",
-      "tt-sub-h3", "tt-staff-h3", "tt-sub-h4", "tt-staff-h4",
-      "tt-sub-h5", "tt-staff-h5", "tt-sub-h6", "tt-staff-h6",
-      "tt-sub-h7", "tt-staff-h7", "tt-sub-h8", "tt-staff-h8",
-      "tt-sub-h9", "tt-staff-h9", "tt-sub-h10", "tt-staff-h10"
-    ]
+    MASTER_STUDENTS: ["std-id", "std-name", "std-class-select", "std-course-select", "std-status", "std-dob", "std-age", "std-primary", "std-secondary", "std-10th", "std-12th", "std-accom", "std-hostel-name", "std-room", "std-address", "std-photo"],
+    CLASS_TIMETABLES: ["tt-class-select", "tt-day-select"]
   };
   return formsMapping[tblKey] || [];
 }
@@ -519,64 +482,49 @@ function saveTimetableRecord() {
   const targetDay = document.getElementById("tt-day-select").value;
 
   if (!classId || !targetDay) {
-    alert("Please select Class and Day configuration to build matrix!");
+    alert("Please select Class and Day configurations!");
     return;
   }
 
   let dynamicPayload = [classId, targetDay];
-
   for (let hr = 1; hr <= 10; hr++) {
     const subVal = document.getElementById(`tt-sub-h${hr}`).value || "FREE PERIOD";
     const staffVal = document.getElementById(`tt-staff-h${hr}`).value || "NO FACULTY ASSIGNED";
     dynamicPayload.push(`${subVal}|${staffVal}`);
   }
 
-  // Handle overwrite duplicates locally
   let ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   let existingIndex = ttList.findIndex(row => row[0] === classId && row[1] === targetDay);
 
-  let recordId = "";
-  if (existingIndex > -1) {
-    recordId = ttList[existingIndex][ttList[existingIndex].length - 1];
-    dynamicPayload.push(recordId);
-    ttList[existingIndex] = dynamicPayload;
-  } else {
-    recordId = "REC-" + Date.now();
-    dynamicPayload.push(recordId);
-    ttList.push(dynamicPayload);
-  }
+  let recordId = existingIndex > -1 ? ttList[existingIndex][ttList[existingIndex].length - 1] : "REC-" + Date.now();
+  dynamicPayload.push(recordId);
+  
+  if (existingIndex > -1) ttList[existingIndex] = dynamicPayload;
+  else ttList.push(dynamicPayload);
 
   localStorage.setItem("CLASS_TIMETABLES", JSON.stringify(ttList));
-  renderAllTables();
   renderTimetableGridDisplay();
 
-  let targetTab = sheetTabForKey("CLASS_TIMETABLES", dynamicPayload);
-  if (targetTab) {
-    syncWithGoogleSheet(targetTab, dynamicPayload, SYSTEM_SCHEMA["CLASS_TIMETABLES"], "CREATE");
-  }
-
-  alert("Timetable Period mapping configurations saved successfully!");
+  let targetTab = sheetTabForKey("CLASS_TIMETABLES");
+  if (targetTab) syncWithGoogleSheet(targetTab, dynamicPayload, SYSTEM_SCHEMA["CLASS_TIMETABLES"], "CREATE");
+  alert("Timetable Configurations Synchronized!");
 }
 
 function renderTimetableGridDisplay() {
   const classId = document.getElementById("tt-class-select").value;
   const gridContainer = document.getElementById("tt-matrix-runtime-grid");
-  if (!gridContainer) return;
+  if (!gridContainer || !classId) return;
 
   gridContainer.innerHTML = "";
-  if (!classId) return;
-
   const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 
-  // Inject structural headers
   gridContainer.appendChild(createHeaderCell("DAY / HOUR"));
   for (let hr = 1; hr <= 10; hr++) {
     if (hr === 5) gridContainer.appendChild(createHeaderCell("LUNCH BREAK"));
     gridContainer.appendChild(createHeaderCell(`PERIOD ${hr}`));
   }
 
-  // Render Day Mapping Rows
   days.forEach(dayName => {
     let dayRowCell = document.createElement("div");
     dayRowCell.className = "tt-cell tt-day";
@@ -599,16 +547,7 @@ function renderTimetableGridDisplay() {
 
       if (cellValue && cellValue.includes("|")) {
         let [sub, staff] = cellValue.split("|");
-        let subTitle = document.createElement("div");
-        subTitle.className = "tt-subject-title";
-        subTitle.innerText = sub || "FREE PERIOD";
-
-        let staffLbl = document.createElement("div");
-        staffLbl.className = "tt-staff-lbl";
-        staffLbl.innerText = staff || "NO FACULTY ASSIGNED";
-
-        cellNode.appendChild(subTitle);
-        cellNode.appendChild(staffLbl);
+        cellNode.innerHTML = `<div class="tt-subject-title">${sub}</div><div class="tt-staff-lbl">${staff}</div>`;
       } else {
         cellNode.innerText = "-";
       }
@@ -632,74 +571,41 @@ function generateAttendanceRegisterForm() {
   const listContainer = document.getElementById("att-students-list-view");
 
   if (!classId || !activeDate || !activeSub) {
-    alert("Select Class, Target Date and Subject Code to initiate attendance capture register!");
+    alert("Select structural targets first!");
     return;
   }
 
   listContainer.innerHTML = "";
-
   const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
   const classStudents = studentsList.filter(s => s[2] === classId);
 
   if (classStudents.length === 0) {
-    listContainer.innerHTML = "<p style='padding: 20px; color: #64748b; font-weight: 600;'>No registered students found in this Class.</p>";
+    listContainer.innerHTML = "<p style='padding: 20px;'>No active student indices found.</p>";
     return;
   }
 
-  // Check if attendance is already present
   const fullAttendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
-
   let table = document.createElement("table");
   table.className = "att-list-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Student ID</th>
-        <th>Student Name</th>
-        <th style="text-align: center;">Status</th>
-      </tr>
-    </thead>
-    <tbody id="attendance-register-entries"></tbody>
-  `;
+  table.innerHTML = `<thead><tr><th>ID</th><th>Name</th><th style='text-align:center;'>Status</th></tr></thead><tbody id="register-entries"></tbody>`;
   listContainer.appendChild(table);
 
-  const entriesBody = document.getElementById("attendance-register-entries");
-
+  const entriesBody = document.getElementById("register-entries");
   classStudents.forEach(student => {
-    let studentId = student[0];
-    let studentName = student[1];
-
-    let preExistingRecord = fullAttendanceLogs.find(
-      log => log[0] === activeDate && log[1] === activeSub && log[2] === classId && log[3] === studentId
-    );
-    let initialStatus = preExistingRecord ? preExistingRecord[4] : "PRESENT";
+    let preExisting = fullAttendanceLogs.find(log => log[0] === activeDate && log[1] === activeSub && log[2] === classId && log[3] === student[0]);
+    let status = preExisting ? preExisting[4] : "PRESENT";
 
     let tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><strong>${studentId}</strong></td>
-      <td>${studentName}</td>
-      <td style="text-align: center;">
-        <button type="button" class="att-status-btn ${initialStatus === "PRESENT" ? "present-state" : "absent-state"}" 
-                id="att-state-btn-${studentId}" data-status="${initialStatus}">
-          ${initialStatus}
-        </button>
-      </td>
-    `;
-
-    const statusBtn = tr.querySelector(`#att-state-btn-${studentId}`);
-    statusBtn.addEventListener("click", () => {
-      let currentStatus = statusBtn.getAttribute("data-status");
-      let nextStatus = currentStatus === "PRESENT" ? "ABSENT" : "PRESENT";
-      statusBtn.setAttribute("data-status", nextStatus);
-      statusBtn.innerText = nextStatus;
-
-      if (nextStatus === "PRESENT") {
-        statusBtn.className = "att-status-btn present-state";
-      } else {
-        statusBtn.className = "att-status-btn absent-state";
-      }
+    tr.innerHTML = `<td><strong>${student[0]}</strong></td><td>${student[1]}</td>
+      <td style='text-align:center;'><button type='button' class='att-status-btn ${status === "PRESENT" ? "present-state" : "absent-state"}' id='att-btn-${student[0]}' data-status='${status}'>${status}</button></td>`;
+    
+    let btn = tr.querySelector(`#att-btn-${student[0]}`);
+    btn.addEventListener("click", () => {
+      let next = btn.getAttribute("data-status") === "PRESENT" ? "ABSENT" : "PRESENT";
+      btn.setAttribute("data-status", next);
+      btn.innerText = next;
+      btn.className = `att-status-btn ${next === "PRESENT" ? "present-state" : "absent-state"}`;
     });
-
     entriesBody.appendChild(tr);
   });
 }
@@ -708,53 +614,29 @@ function saveFacultyAttendanceRegister() {
   const classId = document.getElementById("att-class-select").value;
   const activeDate = document.getElementById("att-date-picker").value;
   const activeSub = document.getElementById("att-subject-select").value;
-  const entriesBody = document.getElementById("attendance-register-entries");
+  const entriesBody = document.getElementById("register-entries");
 
-  if (!entriesBody) {
-    alert("Generate an active attendance register list before attempting save!");
-    return;
-  }
-
+  if (!entriesBody) return;
   const buttons = entriesBody.querySelectorAll(".att-status-btn");
-  let dailyAttendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
+  let logs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
 
   buttons.forEach(btn => {
-    let studentId = btn.id.replace("att-state-btn-", "");
+    let studentId = btn.id.replace("att-btn-", "");
     let capturedStatus = btn.getAttribute("data-status");
 
-    // Overwrite update check
-    let matchIdx = dailyAttendanceLogs.findIndex(
-      log => log[0] === activeDate && log[1] === activeSub && log[2] === classId && log[3] === studentId
-    );
+    let matchIdx = logs.findIndex(log => log[0] === activeDate && log[1] === activeSub && log[2] === classId && log[3] === studentId);
+    let payload = [activeDate, activeSub, classId, studentId, capturedStatus, activeUserSession.name];
+    let recordId = matchIdx > -1 ? logs[matchIdx][logs[matchIdx].length - 1] : "REC-ATT-" + Date.now() + "-" + Math.floor(Math.random()*100);
+    payload.push(recordId);
 
-    let payload = [
-      activeDate,
-      activeSub,
-      classId,
-      studentId,
-      capturedStatus,
-      activeUserSession.name
-    ];
+    if (matchIdx > -1) logs[matchIdx] = payload;
+    else logs.push(payload);
 
-    let recordId = "";
-    if (matchIdx > -1) {
-      recordId = dailyAttendanceLogs[matchIdx][dailyAttendanceLogs[matchIdx].length - 1];
-      payload.push(recordId);
-      dailyAttendanceLogs[matchIdx] = payload;
-    } else {
-      recordId = "REC-ATT-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-      payload.push(recordId);
-      dailyAttendanceLogs.push(payload);
-    }
-
-    let targetTab = sheetTabForKey("DAILY_ATTENDANCE", payload);
-    if (targetTab) {
-      syncWithGoogleSheet(targetTab, payload, SYSTEM_SCHEMA["DAILY_ATTENDANCE"], "CREATE");
-    }
+    syncWithGoogleSheet("Daily_Class_Attendance", payload, SYSTEM_SCHEMA["DAILY_ATTENDANCE"], "CREATE");
   });
 
-  localStorage.setItem("DAILY_ATTENDANCE", JSON.stringify(dailyAttendanceLogs));
-  alert("Daily Attendance Record successfully updated and synchronized!");
+  localStorage.setItem("DAILY_ATTENDANCE", JSON.stringify(logs));
+  alert("Attendance Metrics Uploaded to Cloud Server!");
 }
 
 // 12. STUDENT VIEW PORTAL ENGINE
@@ -765,30 +647,36 @@ function renderStudentSelfProfileViewer() {
   const coursesList = JSON.parse(localStorage.getItem("MASTER_COURSES")) || [];
   const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
 
-  let studentProfile = studentsList.find(s => s[0] == loggedStudentID);
+  let profile = studentsList.find(s => s[0] == loggedStudentID);
+  if (!profile) return;
 
-  if (!studentProfile) {
-    document.getElementById("student-profile-section").innerHTML = `
-      <div style="padding: 40px; text-align: center; color: var(--slate-500);">
-         <h3>Error Profile: Linked student account reference not found.</h3>
-         <p>Contact Administration Desk to resolve matching system accounts.</p>
-      </div>
-    `;
-    return;
+  let classRecord = classesList.find(c => c[0] == profile[2]);
+  let courseRecord = coursesList.find(co => co[0] == profile[3]);
+
+  document.getElementById("p-student-id").innerText = profile[0];
+  document.getElementById("p-student-name").innerText = profile[1];
+  document.getElementById("p-class-name").innerText = classRecord ? classRecord[1] : profile[2];
+  document.getElementById("p-course-name").innerText = courseRecord ? courseRecord[1] : profile[3];
+  document.getElementById("p-status").innerText = profile[4] || "Active";
+  document.getElementById("p-dob").innerText = profile[5];
+  document.getElementById("p-age").innerText = profile[6];
+  document.getElementById("p-primary").innerText = profile[7];
+  document.getElementById("p-secondary").innerText = profile[8] || "-";
+  document.getElementById("p-marks").innerText = `10th: ${profile[9]}% | 12th: ${profile[10]}%`;
+  
+  let accomText = profile[11];
+  if(accomText === "Hostel") accomText += ` (${profile[12]} - Room ${profile[13]})`;
+  document.getElementById("p-accommodation").innerText = accomText;
+  document.getElementById("p-address").innerText = profile[14];
+
+  // Dynamic Avatar Photo Sync View Engine
+  const photoFrame = document.getElementById("p-student-photo-frame");
+  if (photoFrame && profile[15]) {
+    photoFrame.innerHTML = `<img src="${profile[15]}" alt="Profile Photo">`;
+  } else if (photoFrame) {
+    photoFrame.innerHTML = `<i class="fas fa-user-graduate"></i>`;
   }
 
-  let classRecord = classesList.find(c => c[0] == studentProfile[2]);
-  let courseRecord = coursesList.find(co => co[0] == studentProfile[3]);
-
-  // Update dynamic elements on Profile UI Card
-  document.getElementById("p-student-id").innerText = studentProfile[0];
-  document.getElementById("p-student-name").innerText = studentProfile[1];
-  document.getElementById("p-class-name").innerText = classRecord ? classRecord[1] : studentProfile[2];
-  document.getElementById("p-course-name").innerText = courseRecord ? courseRecord[1] : studentProfile[3];
-  document.getElementById("p-dob").innerText = studentProfile[4];
-  document.getElementById("p-contact").innerText = studentProfile[5];
-
-  // Render attendance metric records
   const studentAttLogs = attendanceLogs.filter(log => log[3] == loggedStudentID);
   const totalSlots = studentAttLogs.length;
   const presentSlots = studentAttLogs.filter(log => log[4] === "PRESENT").length;
@@ -799,31 +687,16 @@ function renderStudentSelfProfileViewer() {
   document.getElementById("p-absent-days").innerText = totalSlots - presentSlots;
   document.getElementById("p-percentage").innerText = percentageValue + "%";
 
-  // Build custom attendance grid timeline
   const attHistoryBody = document.getElementById("student-att-history-tbody");
   if (attHistoryBody) {
     attHistoryBody.innerHTML = "";
     if (studentAttLogs.length === 0) {
-      attHistoryBody.innerHTML = "<tr><td colspan='4' style='text-align: center; color: var(--slate-400);'>No historical logs recorded.</td></tr>";
+      attHistoryBody.innerHTML = "<tr><td colspan='4' style='text-align: center; color: var(--slate-400);'>No logs.</td></tr>";
       return;
     }
-
-    // Sort history by date descending
     studentAttLogs.sort((a,b) => new Date(b[0]) - new Date(a[0]));
-
     studentAttLogs.forEach(log => {
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><strong>${log[0]}</strong></td>
-        <td>${log[1]}</td>
-        <td>
-          <span style="font-weight: 700; color: ${log[4] === "PRESENT" ? "#166534" : "#991b1b"}">
-            ${log[4]}
-          </span>
-        </td>
-        <td>${log[5] || "System Staff"}</td>
-      `;
-      attHistoryBody.appendChild(tr);
+      attHistoryBody.insertAdjacentHTML('beforeend', `<tr><td><strong>${log[0]}</strong></td><td>${log[1]}</td><td><span style="font-weight:700; color:${log[4]==='PRESENT'?'#166534':'#991b1b'}">${log[4]}</span></td><td>${log[5]}</td></tr>`);
     });
   }
 }
