@@ -653,7 +653,8 @@ function renderStaffDashboardConsole() {
       if (tt[0] === alloc[1]) {
         for (let hr = 1; hr <= 7; hr++) {
           let fieldVal = tt[hr + 1] || "";
-          if (fieldVal.includes(alloc[2]) && fieldVal.includes(staffName)) {
+          let currentStaffId = profile ? profile[0] : activeUserSession.uid;
+if (fieldVal.includes(alloc[2]) && (fieldVal.includes(staffName) || fieldVal.includes(currentStaffId))) {
             matchingPeriods.push(`${tt[1]} (Period ${hr})`);
           }
         }
