@@ -798,19 +798,21 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
   const timetables = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
   const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  
+  // Input-la select panni irukura date-oda exact Day (e.g., TUESDAY) edukurom
   const activeDateVal = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
-  const activeDayName = days[new Date(activeDateVal).getDay()];
+  const activeDayName = days[new Date(activeDateVal).getDay()].toUpperCase();
   const staffName = activeUserSession.name;
 
   let availablePeriods = [];
-  const dayPlan = timetables.find(row => row[0] === classId && row[1] === activeDayName);
+  const dayPlan = timetables.find(row => row[0] === classId && row[1].toUpperCase() === activeDayName);
   
   if (dayPlan) {
     for (let hr = 1; hr <= 7; hr++) {
       let cellData = dayPlan[hr + 1] || "";
       if (cellData.includes("|")) {
         let [subjectToken, staffToken] = cellData.split("|");
-        // Timetable cell matching checking logic
+        // Staff name matrum subject code exact match aana mattum thaan array-la push aagum
         if (subjectToken.trim() === subCode && (activeUserSession.role === "ADMIN" || staffToken.includes(staffName))) {
           availablePeriods.push(hr);
         }
@@ -818,9 +820,17 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
     }
   }
 
-  // Timetable fallback logic wrapper setup
+  // Fallback system-ah completely remove pannitom! 
+  // Timetable-la record illai endral empty-ah thaan kaatum (unassigned periods display aagathu)
   if (availablePeriods.length === 0) {
-    availablePeriods = [1, 2, 3, 4, 5, 6, 7];
+    periodWrapper.innerHTML = `
+      <div class="form-field-group" style="margin-top: 15px;">
+        <label style="font-weight: 700; color: var(--slate-800);">Step 2: Choose Mapped Period hour</label>
+        <p style="color: #dc2626; font-weight: 600; padding: 10px 0;">
+          No periods assigned for you on ${activeDayName} in the timetable.
+        </p>
+      </div>`;
+    return;
   }
 
   let html = `
@@ -832,7 +842,7 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
   availablePeriods.forEach(p => {
     let subColumnKey = `${subCode}_P${p}`;
     
-    // Check if yaarathu already upload panni irukaangala (Person A or B)
+    // Check if attendance is already uploaded
     let alreadyMarkedLog = attendanceLogs.find(log => 
       log[0] === activeDateVal && 
       log[1] === subColumnKey && 
@@ -843,7 +853,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
       let markerName = alreadyMarkedLog[5];
       let isByMe = markerName === staffName;
       
-      // Person A update panniruntha button green color/lock logic with distinct status state
       html += `
         <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:#059669; min-width: 150px; text-align:center;">
           Period ${p} <br/>
@@ -852,7 +861,6 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
           </span>
         </button>`;
     } else {
-      // Pending button
       html += `
         <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:var(--sky-600); min-width: 150px; text-align:center;">
           Period ${p} <br/>
