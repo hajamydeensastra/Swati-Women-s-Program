@@ -44,7 +44,6 @@
       overflow-x: hidden;
     }
 
-    /* GLOBAL BRANDING LOGO HEADER SETUP */
     .global-logo-header { 
       background: #ffffff; 
       padding: 18px 40px; 
@@ -69,7 +68,6 @@
       transform: scale(1.03);
     }
 
-    /* AUTHENTICATION GATEWAY LAYOUT ENGINE */
     .login-page { 
       position: fixed; 
       top: 0; 
@@ -182,7 +180,6 @@
       font-weight: 500;
     }
 
-    /* SYSTEM WORKSPACE LAYOUT WRAPPERS */
     .workspace-wrapper { 
       display: flex; 
       width: 100%; 
@@ -293,7 +290,6 @@
       gap: 6px;
     }
 
-    /* DATA LAYOUT CONTAINERS & GRID PANELS */
     .data-section { 
       background: #ffffff; 
       padding: 30px; 
@@ -367,6 +363,10 @@
     .action-btn:hover {
       background: var(--sky-600);
     }
+    .action-btn:disabled {
+      background: var(--slate-400);
+      cursor: not-allowed;
+    }
     .search-input-wrapper { 
       margin-top: 24px; 
       max-width: 400px; 
@@ -389,7 +389,6 @@
       font-size: 15px; 
     }
 
-    /* DATA TABLES MANAGEMENT CONFIGURATIONS */
     .table-container { 
       width: 100%; 
       max-height: 400px; 
@@ -469,7 +468,6 @@
       gap: 6px; 
     }
 
-    /* HOUR MATRIX TIMETABLE BUILDER */
     .tt-grid { 
       display: grid; 
       grid-template-columns: 120px repeat(10, minmax(110px, 1fr)); 
@@ -529,7 +527,6 @@
       border: 1px dashed var(--slate-200); 
     }
 
-    /* STUDENT DESK PROFILE VIEWER */
     .student-header-block { 
       display: flex; 
       align-items: center; 
@@ -621,11 +618,22 @@
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    
+    .alert-warning-box {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 15px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- GLOBAL INSTITUTION HEADER BRANDS -->
   <div class="global-logo-header" id="global-header" style="display: none;">
     <div class="logo-container-flex">
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo">
@@ -635,7 +643,6 @@
     </div>
   </div>
 
-  <!-- STAGE 1: CREDENTIALS AUTH SCREEN -->
   <div class="login-page" id="login-screen">
     <div class="login-logo-wrapper">
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo">
@@ -669,7 +676,6 @@
     </div>
   </div>
 
-  <!-- STAGE 2: WORKSPACE GRID OPERATIONS -->
   <div class="workspace-wrapper">
     <nav class="sidebar" id="main-sidebar">
       <div class="sidebar-brand">
@@ -678,7 +684,6 @@
       </div>
       <div class="sidebar-menu" id="menu-container"></div>
     </nav>
-
     <main class="main-content" id="main-content-area">
       <header>
         <div>
@@ -691,45 +696,24 @@
     </main>
   </div>
 
-  <!-- INTERNAL INTERFACE RUNTIME SCRIPTS -->
   <script>
-    // --- APP SCRIPT HOOK ---
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8kn3-JapGlhj3cVWEyy_ll3pr_MJ3LlkHxY0bctquKUco7N3HpgcBKfeoOMsN_lgSgQ/exec";
-
     let activeUserSession = { role: "", uid: "", name: "" };
-    let tempBase64Image = ""; 
+    let tempBase64Image = "";
+    let editingRowIndices = { User_Credentials: -1, Student_Database: -1, Staff_Database: -1, Subject_Database: -1, Subject_Allocation: -1, Daily_Class_Attendance: -1, Legacy_Marks_Ledger: -1, Event_Internship_Attendance: -1 };
+
+    function genId() { return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
     
-    let editingRowIndices = {
-      User_Credentials: -1, Student_Database: -1, Staff_Database: -1,
-      Subject_Database: -1, Subject_Allocation: -1, Daily_Class_Attendance: -1,
-      Legacy_Marks_Ledger: -1, Event_Internship_Attendance: -1
-    };
-
-    // Generates a unique id for every saved row. Every table now carries this as its LAST
-    // column ("Record ID") so Edit/Update and Delete can target the exact row instead of the
-    // old approach of guessing a "unique" visible column, which could match multiple rows.
-    function genId() {
-      return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-    }
-
-    // Escapes user-entered text before it is injected into innerHTML, to stop stored data
-    // (student names, addresses, subject names, etc.) from being able to break out and run
-    // as HTML/script when it is rendered back into a table.
     function escapeHtml(str) {
       if (str === null || str === undefined) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     const studentHeaders = ["Student ID", "Name", "Status", "DOB", "Age", "Phone 1", "Phone 2", "Qualification", "10th%", "12th%", "Accommodation", "Hostel Name", "Room No", "Address", "PhotoData", "Batch", "Record ID"];
     const staffHeaders = ["Staff ID", "Staff Name", "Department", "Mobile No", "Record ID"];
     const subjectHeaders = ["Subject Code", "Subject Name", "Type", "Hours/Week", "Semester", "Record ID"];
     const allocationHeaders = ["Staff ID", "Staff Name", "Subject Code", "Subject Name", "Record ID"];
-    const dailyAttendanceHeaders = ["Date", "Subject Code", "Semester", "Student ID", "Student Name", "Status", "Marked By", "Record ID"];
+    const dailyAttendanceHeaders = ["Date", "Subject Code", "Period", "Semester", "Student ID", "Student Name", "Status", "Marked By", "Record ID"];
     const legacyMarksHeaders = ["Subject Code", "Student ID", "Student Name", "CIA 1 (50)", "CIA 2 (50)", "CIA 3 (50)", "Assignment (5)", "Attendance (5)", "Semester (100)", "Total Mark (100)", "Entered By", "Record ID"];
     const eventAttendanceHeaders = ["Date", "Category Type", "Description / Title", "Batch", "Student ID", "Student Name", "Attendance Status", "Record ID"];
     const userHeaders = ["Account Type", "User ID", "Password", "Record ID"];
@@ -751,997 +735,309 @@
     const adminMenus = [
       { id: 'user_ids', name: '1. User ID Creation', icon: 'fa-user-plus', html: `<div class="data-section"><h2>Generate New Login Credentials</h2><div class="inline-form"><div><label>Account Type</label><select id="usr-type"><option value="Staff">Staff</option><option value="Student">Student</option></select></div><div><label>User ID / Roll No</label><input type="text" id="usr-id" placeholder="e.g. STF101 / STD501"></div><div><label>System Password</label><input type="text" id="usr-pass" placeholder="Create Password"></div><button class="action-btn" id="btn-usr" onclick="saveUserData()">Create Account</button></div><div class="table-container" id="table-User_Credentials"></div></div>` },
       { id: 'student_mgmt', name: '2. Student Database', icon: 'fa-user-graduate', html: `<div class="data-section"><h2>Manage Students Matrix</h2><div class="form-grid-layout"><div class="form-field-group"><label>Student ID / Roll No</label><input type="text" id="std-id" placeholder="e.g. STD501"></div><div class="form-field-group"><label>Name</label><input type="text" id="std-name" placeholder="Full Name"></div><div class="form-field-group"><label>Student Status</label><select id="std-status"><option value="Active">Active</option><option value="Drop">Drop</option><option value="Completed">Completed</option></select></div><div class="form-field-group"><label>Batch Yr Dropdown</label><select id="std-batch"><option value="2026-2028">Batch 1 (2026 - 2028)</option><option value="2027-2029">Batch 2 (2027 - 2029)</option></select></div><div class="form-field-group"><label>DOB</label><input type="date" id="std-dob" onchange="autoCalculateAge()"></div><div class="form-field-group"><label>Age</label><input type="number" id="std-age" readonly style="background:#f1f5f9;"></div><div class="form-field-group"><label>Phone 1</label><input type="text" id="std-p1" placeholder="Primary Contact"></div><div class="form-field-group"><label>Phone 2</label><input type="text" id="std-p2" placeholder="Secondary Contact"></div><div class="form-field-group"><label>Qualification</label><input type="text" id="std-qual" placeholder="HSC"></div><div class="form-field-group"><label>10th Mark %</label><input type="text" id="std-10th" placeholder="85%"></div><div class="form-field-group"><label>12th Mark %</label><input type="text" id="std-12th" placeholder="90%"></div><div class="form-field-group"><label>Accommodation</label><select id="std-accom" onchange="toggleHostelFields()"><option value="Dayscholar">Dayscholar</option><option value="Hostel">Hostel</option></select></div><div class="form-field-group"><label>Hostel Name</label><input type="text" id="std-hname" placeholder="N/A" disabled></div><div class="form-field-group"><label>Room No</label><input type="text" id="std-rno" placeholder="N/A" disabled></div><div class="form-field-group"><label>Passport Photo</label><input type="file" id="std-photo" accept="image/*" onchange="processImageUpload(this)"></div><div class="form-field-group" style="grid-column: span 2;"><label>Full Address</label><textarea id="std-addr" rows="2"></textarea></div></div><div style="margin-top:20px;"><button class="action-btn" id="btn-std" onclick="saveStudentData()">Save Entry</button></div><div class="search-input-wrapper"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="student-search-bar" placeholder="Search Student..." oninput="renderAllTables()"></div><div class="table-container" id="table-Student_Database"></div></div>` },
-      { id: 'staff_mgmt', name: '3. Staff Database', icon: 'fa-user-tie', html: `<div class="data-section"><h2>Manage Staff Entry</h2><div class="inline-form"><div><label>Staff ID</label><input type="text" id="stf-id" placeholder="STF101"></div><div><label>Staff Name</label><input type="text" id="stf-name" placeholder="Name"></div><div><label>Department</label><input type="text" id="stf-dept" placeholder="Manufacturing"></div><div><label>Mobile No</label><input type="text" id="stf-mobile" placeholder="Mobile"></div><button class="action-btn" id="btn-stf" onclick="saveStaffData()">Save Entry</button></div><div class="table-container" id="table-Staff_Database"></div></div>` },
-      { id: 'subject_mgmt', name: '4. Subject Catalog', icon: 'fa-book', html: `<div class="data-section"><h2>Subject Catalog</h2><div class="inline-form"><div><label>Subject Code</label><input type="text" id="sub-code" placeholder="CS8501"></div><div><label>Subject Name</label><input type="text" id="sub-name" placeholder="Name"></div><div><label>Type</label><select id="sub-type"><option value="Semi theory">Semi theory</option><option value="Practical">Practical</option></select></div><div><label>Hours/Week</label><input type="number" id="sub-hours"></div><div><label>Semester</label><select id="sub-sem"><option value="I">I</option><option value="II">II</option><option value="III">III</option><option value="IV">IV</option></select></div><button class="action-btn" id="btn-sub" onclick="saveSubjectData()">Save Entry</button></div><div class="table-container" id="table-Subject_Database"></div></div>` },
-      { id: 'subject_allotment', name: '5. Subject Allocation', icon: 'fa-code-branch', html: `<div class="data-section"><h2>Allot Subjects to Staff Matrix</h2><div class="inline-form"><div><label>Select Staff Member</label><select id="alt-stf-id"></select></div><div><label>Select Subject</label><select id="alt-sub-code"></select></div><button class="action-btn" id="btn-alt" onclick="saveSubjectAllocation()">Allocate Subject</button></div><div class="table-container" id="table-Subject_Allocation"></div></div>` },
-      { id: 'timetable_mgmt', name: '6. Timetable Management', icon: 'fa-calendar-days', html: `<div class="data-section"><h2>Master Timetable Grid Setup</h2><div class="inline-form"><div><label>Day Order</label><select id="tt-day"><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option></select></div><div><label>Operational Hour</label><select id="tt-period"></select></div><div><label>Subject Mapping</label><select id="tt-alloc-id" onchange="updateStaffDropdownForTimetable()"></select></div><div><label>Staff (Assigned)</label><select id="tt-staff-id"></select></div><button class="action-btn" onclick="saveTimetableCell()">Assign</button></div><div id="timetable-master-preview" style="margin-top:25px;"></div></div>` },
-      { id: 'event_attendance_mgmt', name: '7. Event/Internship Attendance', icon: 'fa-clipboard-check', html: `<div class="data-section"><h2>Event & Internship Attendance Registry</h2><div class="form-grid-layout"><div class="form-field-group"><label>Category Type</label><select id="evt-type"><option value="Event">Event</option><option value="Internship">Internship</option></select></div><div class="form-field-group"><label>Select Target Batch</label><select id="evt-batch-select" onchange="loadEventBatchStudents()"><option value="">-- Choose Batch --</option><option value="2026-2028">Batch 1 (2026 - 2028)</option><option value="2027-2029">Batch 2 (2027 - 2029)</option></select></div><div class="form-field-group"><label>Execution Date</label><input type="date" id="evt-date"></div><div class="form-field-group"><label>Description / Event Title</label><input type="text" id="evt-desc" placeholder="e.g. AI Hackathon"></div></div><div style="margin-top:20px;" id="event-student-list-wrapper"></div><div style="margin-top:15px; text-align:right;"><button class="action-btn" id="btn-commit-evt-att" onclick="saveEventAttendanceData()">Commit Event Log</button></div><div class="table-container" id="table-Event_Internship_Attendance"></div></div>` }
+      { id: 'staff_mgmt', name: '3. Staff Database', icon: 'fa-user-tie', html: `<div class="data-section"><h2>Manage Staff Entry</h2><div class="inline-form"><div><label>Staff ID</label><input type="text" id="stf-id" placeholder="STF101"></div><div><label>Staff Name</label><input type="text" id="stf-name" placeholder="Name"></div><div><label>Department</label><input type="text" id="stf-dept" placeholder="EIE / CSE"></div><div><label>Mobile No</label><input type="text" id="stf-mob" placeholder="Phone"></div><button class="action-btn" id="btn-stf" onclick="saveStaffData()">Save Entry</button></div><div class="table-container" id="table-Staff_Database"></div></div>` },
+      { id: 'subject_catalog', name: '4. Subject Catalog', icon: 'fa-book', html: `<div class="data-section"><h2>Manage Subjects</h2><div class="form-grid-layout"><div class="form-field-group"><label>Subject Code</label><input type="text" id="sub-code" placeholder="SAM1001"></div><div class="form-field-group"><label>Subject Name</label><input type="text" id="sub-name" placeholder="Engineering Mathematics"></div><div class="form-field-group"><label>Type</label><select id="sub-type"><option value="Theory">Theory</option><option value="Practical">Practical</option></select></div><div class="form-field-group"><label>Hours / Week</label><input type="number" id="sub-hours" value="4"></div><div class="form-field-group"><label>Semester</label><select id="sub-sem"><option value="I">Semester I</option><option value="II">Semester II</option><option value="III">Semester III</option><option value="IV">Semester IV</option></select></div></div><div style="margin-top:20px;"><button class="action-btn" id="btn-sub" onclick="saveSubjectData()">Save Subject</button></div><div class="table-container" id="table-Subject_Database"></div></div>` },
+      { id: 'subject_alloc', name: '5. Subject Allocation Matrix', icon: 'fa-network-wired', html: `<div class="data-section"><h2>Map Staff to Subjects</h2><div class="form-grid-layout"><div class="form-field-group"><label>Select Staff</label><select id="alloc-staff-select"></select></div><div class="form-field-group"><label>Select Subject</label><select id="alloc-subject-select"></select></div></div><div style="margin-top:20px;"><button class="action-btn" id="btn-alloc" onclick="saveAllocationData()">Map Faculty</button></div><div class="table-container" id="table-Subject_Allocation"></div></div>` },
+      { id: 'master_timetable', name: '6. Master Timetable Matrix', icon: 'fa-calendar-week', html: `<div class="data-section"><h2>Configure Master Dynamic Timetable</h2><div class="form-grid-layout"><div class="form-field-group"><label>Day of Week</label><select id="tt-day"><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option></select></div><div class="form-field-group"><label>Select Period Slot</label><select id="tt-slot"></select></div><div class="form-field-group"><label>Select Subject</label><select id="tt-subject-select" onchange="autoFillTimetableStaff()"></select></div><div class="form-field-group"><label>Assigned Staff</label><input type="text" id="tt-staff-name" readonly style="background:#f1f5f9;"></div></div><div style="margin-top:20px;"><button class="action-btn" onclick="saveTimetableData()">Map Timetable Row</button></div><div id="timetable-matrix-view-pane" style="margin-top:30px;"></div></div>` },
+      { id: 'event_attendance', name: '7. Event / Internship Attendance', icon: 'fa-calendar-check', html: `<div class="data-section"><h2>Record Event / Special Attendance</h2><div class="form-grid-layout"><div class="form-field-group"><label>Date</label><input type="date" id="evt-date"></div><div class="form-field-group"><label>Category Type</label><select id="evt-type"><option value="Event">Event</option><option value="Internship">Internship</option><option value="Special Class">Special Class</option></select></div><div class="form-field-group"><label>Description / Title</label><input type="text" id="evt-desc" placeholder="Symposium / Core Sync"></div><div class="form-field-group"><label>Target Student Batch</label><select id="evt-batch" onchange="loadEventAttendanceGrid()"><option value="">Select Batch</option><option value="2026-2028">Batch 2026-2028</option><option value="2027-2029">Batch 2027-2029</option></select></div></div><div id="event-attendance-grid-pane" style="margin-top:24px;"></div></div>` }
     ];
 
     const staffMenus = [
-      { id: 'staff_profile', name: '1. My Dashboard & Mapping', icon: 'fa-id-card', html: `<div class="data-section"><h2>Staff Authentication Profile</h2><div id="stf-profile-details" style="margin-top:10px; line-height:1.8;"></div></div><div class="data-section"><h2>Assigned Academic Subjects</h2><div class="table-container" id="table-Staff_Subject_View"></div></div>` },
-      { id: 'staff_daily_att', name: '2. Daily Class Attendance', icon: 'fa-clipboard-user', html: `<div class="data-section"><h2>Record Hour Wise Attendance</h2><div class="inline-form"><div><label>Date</label><input type="date" id="cls-date" onchange="checkExistingAttendanceToday()"></div><div><label>Subject Dropdown</label><select id="cls-sub-code" onchange="onSubjectChange()"></select></div><div><label>Semester</label><select id="cls-sem"><option value="I">I</option><option value="II">II</option><option value="III">III</option><option value="IV">IV</option></select></div></div><div id="duplicate-att-alert" style="display:none; color: #b91c1c; background: #fee2e2; border: 1px solid #f87171; padding: 12px; border-radius: 8px; margin-top: 15px; font-weight: 600;"></div><div style="margin-top:20px;" id="simple-attendance-list-wrapper"></div><div style="margin-top:15px; text-align:right;"><button class="action-btn" id="btn-commit-att" onclick="saveDailyClassAttendance()">Commit Attendance</button></div><div class="table-container" id="table-Daily_Attendance_Ledger"></div></div>` },
-      { id: 'staff_legacy_marks', name: '3. Student Mark Allocation Portal', icon: 'fa-pen-to-square', html: `<div class="data-section"><h2>Continuous Comprehensive Internal Evaluation</h2><div class="inline-form" style="grid-template-columns: 1fr 160px;"><div><label>Select Target Assigned Subject</label><select id="leg-sub-code" onchange="generateLegacyMarksTemplate()"></select></div><button class="action-btn" id="btn-commit-marks" onclick="saveLegacyMarksLedger()">Commit Marks Matrix</button></div><div style="margin-top:20px;" id="legacy-marks-matrix-wrapper"></div><div class="table-container" id="table-Legacy_Marks_Ledger"></div></div>` }
+      { id: 'record_attendance', name: 'Record Hour Wise Attendance', icon: 'fa-clipboard-user', html: `<div class="data-section"><h2>Daily Class Attendance Roster</h2><div class="form-grid-layout"><div class="form-field-group"><label>Date</label><input type="date" id="att-date" onchange="checkExistingAttendance()"></div><div class="form-field-group"><label>Allocated Subject</label><select id="att-subject" onchange="checkExistingAttendance()"></select></div><div class="form-field-group"><label>Semester</label><select id="att-sem"><option value="I">Semester I</option><option value="II">Semester II</option><option value="III">Semester III</option><option value="IV">Semester IV</option></select></div><div class="form-field-group"><label>Period / Hour</label><select id="att-period" onchange="checkExistingAttendance()"><option value="">Select Period</option><option value="Period 1">Period 1</option><option value="Period 2">Period 2</option><option value="Period 3">Period 3</option><option value="Period 4">Period 4</option><option value="Period 5">Period 5</option><option value="Period 6">Period 6</option><option value="Period 7">Period 7</option></select></div></div><div class="alert-warning-box" id="attendance-warning"></div><div id="class-attendance-grid-pane" style="margin-top:24px;"></div></div>` },
+      { id: 'marks_entry', name: 'Legacy Marks Ledger Desk', icon: 'fa-file-invoice', html: `<div class="data-section"><h2>Marks Entry Matrix</h2><div class="form-grid-layout"><div class="form-field-group"><label>Select Subject</label><select id="marks-subject-select" onchange="loadMarksLedgerGrid()"></select></div></div><div id="marks-ledger-grid-pane" style="margin-top:24px;"></div></div>` }
     ];
 
     const studentMenus = [
-      { id: 'std_profile', name: '1. My Profile', icon: 'fa-user-circle', html: `<div class="data-section"><div class="student-header-block" id="student-header-identity"></div><div class="profile-card" id="student-profile-cards"></div></div>` },
-      { id: 'std_attendance', name: '2. Attendance Analytics', icon: 'fa-calendar-check', html: `<div class="data-section"><h2>Live Attendance Tracker</h2><div class="table-container" id="student-attendance-view"></div></div>` },
-      { id: 'std_report', name: '3. Academic Report Card', icon: 'fa-graduation-cap', html: `<div class="data-section"><h2>Internal & Semester Marks Grade Sheet</h2><div class="table-container" id="student-marks-view"></div></div>` }
+      { id: 'student_profile', name: 'My Profile Desk', icon: 'fa-id-card', html: `<div class="data-section" id="student-profile-root-view"></div>` },
+      { id: 'my_attendance', name: 'My Attendance Ledger', icon: 'fa-chart-pie', html: `<div class="data-section"><h2>Attendance Analytics Tracker</h2><div id="student-attendance-analytics-pane"></div></div>` }
     ];
 
-    // Core execution algorithms, data formatting, sync loops continue here...
-    function fetchDataFromGoogleSheets() {
-      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT")) return;
-      const badge = document.querySelector('.mode-badge');
-      if (badge) badge.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i> Syncing...';
+    function handleUniversalLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      const err = document.getElementById('error-box');
 
-      fetch(GOOGLE_SCRIPT_URL)
-        .then(res => res.json())
-        .then(data => {
-          if (data["Staff_Registry"]) localStorage.setItem("Staff_Database", JSON.stringify(data["Staff_Registry"]));
-          if (data["Subject_Catalog"]) localStorage.setItem("Subject_Database", JSON.stringify(data["Subject_Catalog"]));
-          if (data["Subject_Allocation_Matrix"]) localStorage.setItem("Subject_Allocation", JSON.stringify(data["Subject_Allocation_Matrix"]));
-          if (data["User_Credentials"]) localStorage.setItem("User_Credentials", JSON.stringify(data["User_Credentials"]));
-
-          let masterStudents = [studentHeaders];
-          Object.keys(data).forEach(sheetName => {
-            if (sheetName.indexOf("Students_") === 0) {
-              var rows = data[sheetName];
-              for(var r=1; r<rows.length; r++) masterStudents.push(rows[r]);
-            }
-          });
-          if(masterStudents.length > 1) localStorage.setItem("Student_Database", JSON.stringify(masterStudents));
-
-          let masterDailyAtt = [];
-          let masterEventAtt = [];
-          Object.keys(data).forEach(sheetName => {
-            if (sheetName.indexOf("Class_Att_") === 0) {
-              var rows = data[sheetName];
-              for(var r=1; r<rows.length; r++) masterDailyAtt.push(rows[r]);
-            }
-            if (sheetName.indexOf("Event_Att_") === 0) {
-              var rows = data[sheetName];
-              for(var r=1; r<rows.length; r++) masterEventAtt.push(rows[r]);
-            }
-          });
-          localStorage.setItem("Daily_Class_Attendance", JSON.stringify(masterDailyAtt));
-          localStorage.setItem("Event_Internship_Attendance", JSON.stringify(masterEventAtt));
-
-          // FIX: previously Legacy_Marks_Ledger was saved TO Sheets but never read back, so
-          // entered marks disappeared on refresh and never reached other devices at all.
-          if (data["Legacy_Marks_Ledger"]) {
-            let marksRows = data["Legacy_Marks_Ledger"];
-            localStorage.setItem("Legacy_Marks_Ledger", JSON.stringify(marksRows.slice(1)));
-          }
-
-          // FIX: the Timetable was previously kept ONLY in the admin's own browser localStorage
-          // and never synced, so staff/students never actually saw it and it was lost if that
-          // browser's storage was cleared.
-          if (data["Timetable_Matrix"]) {
-            let ttRows = data["Timetable_Matrix"];
-            let matrixObj = {};
-            for (let r = 1; r < ttRows.length; r++) {
-              const day = ttRows[r][0], periodId = ttRows[r][1], subCode = ttRows[r][2], staffName = ttRows[r][3], recId = ttRows[r][4];
-              if (!matrixObj[day]) matrixObj[day] = {};
-              matrixObj[day][periodId] = { subCode: subCode, staffName: staffName, recordId: recId };
-            }
-            localStorage.setItem("Timetable_Matrix", JSON.stringify(matrixObj));
-          }
-
-          renderAllTables();
-          if (badge) badge.innerHTML = '<i class="fa-solid fa-cloud"></i> Hybrid Engine Enabled';
-        })
-        .catch(err => {
-          if (badge) badge.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Offline Mode';
-        });
-    }
-
-    function syncWithGoogleSheet(tabName, headers, payload, action = "SAVE", rowId = "") {
-      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT")) return;
-      
-      const packet = { tabName: tabName, headers: headers, payload: payload, action: action, rowId: rowId };
-      fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(packet),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
-      })
-      .then(res => res.json())
-      .then(() => fetchDataFromGoogleSheets())
-      .catch(err => console.error("Cloud Synchro Error:", err));
-    }
-
-    function processImageUpload(input) {
-      if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) { tempBase64Image = e.target.result; };
-        reader.readAsDataURL(input.files[0]);
-      }
-    }
-
-    function handleUniversalLogin(event) {
-      event.preventDefault();
-      const uid = document.getElementById('username').value.trim();
-      const pass = document.getElementById('password').value.trim();
-      const errorBox = document.getElementById('error-box');
-
-      if (uid === 'admin' && pass === 'admin123') {
-        activeUserSession = { role: "ADMIN", uid: "admin", name: "Administrator" };
-        launchWorkspace();
+      if (u.toLowerCase() === 'admin' && p === 'admin123') {
+        initSession("Admin", "admin", "System Administrator");
         return;
-      } 
+      }
 
-      const userCredentials = JSON.parse(localStorage.getItem("User_Credentials")) || [];
-      const staffDB = JSON.parse(localStorage.getItem("Staff_Database")) || [];
-      const studentDB = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      
-      let credentialRecord = userCredentials.find(row => row[1] === uid && row[2] === pass);
+      let credentialsMatrix = JSON.parse(localStorage.getItem("User_Credentials")) || [];
+      let foundCred = credentialsMatrix.find(row => row[1] === u && row[2] === p);
 
-      if (credentialRecord) {
-        if(credentialRecord[0] === 'Staff') {
-          let staffInfo = staffDB.find(row => row[0] === uid) || [uid, "Academic Staff Member", "Department", "-"];
-          activeUserSession = { role: "STAFF", uid: uid, name: staffInfo[1], dept: staffInfo[2] };
-        } else {
-          let studentInfo = studentDB.find(row => row[0] === uid) || [uid, "Student Profile Row", "Active", "", "", "", "", "", "", "", "", "", "", "", "", ""];
-          activeUserSession = { role: "STUDENT", uid: uid, name: studentInfo[1], rawData: studentInfo };
+      if (foundCred) {
+        let role = foundCred[0];
+        if (role === "Staff") {
+          let staffMatrix = JSON.parse(localStorage.getItem("Staff_Database")) || [];
+          let match = staffMatrix.find(r => r[0] === u);
+          initSession("Staff", u, match ? match[1] : "Staff Member");
+        } else if (role === "Student") {
+          let studentMatrix = JSON.parse(localStorage.getItem("Student_Database")) || [];
+          let match = studentMatrix.find(r => r[0] === u);
+          initSession("Student", u, match ? match[1] : "Student Member");
         }
-        launchWorkspace();
       } else {
-        errorBox.style.display = 'block';
+        err.style.display = 'block';
       }
     }
 
-    function launchWorkspace() {
+    function initSession(role, uid, name) {
+      activeUserSession = { role, uid, name };
       document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('global-header').style.display = 'flex';
+      document.getElementById('global-header').style.display = 'block';
       document.getElementById('main-sidebar').style.display = 'flex';
       document.getElementById('main-content-area').style.display = 'block';
 
-      const sidebarText = document.getElementById('brand-text');
-      const sidebarIcon = document.getElementById('brand-icon');
-      
-      if(activeUserSession.role === "ADMIN") {
-        sidebarText.innerText = "Admin Workspace";
-        sidebarIcon.className = "fa-solid fa-user-gear";
-        renderMenuLayout(adminMenus);
-      } else if(activeUserSession.role === "STAFF") {
-        sidebarText.innerText = "Staff Console";
-        sidebarIcon.className = "fa-solid fa-user-tie";
-        renderMenuLayout(staffMenus);
-      } else {
-        sidebarText.innerText = "Student Desk";
-        sidebarIcon.className = "fa-solid fa-user-graduate";
-        renderMenuLayout(studentMenus);
-      }
+      document.getElementById('brand-text').innerText = role + " Desk";
+      document.getElementById('brand-icon').className = role === 'Admin' ? 'fa-solid fa-user-gear' : (role === 'Staff' ? 'fa-solid fa-user-tie' : 'fa-solid fa-user-graduate');
+
+      buildSidebarMenus();
+      fetchDataFromGoogleSheets();
     }
 
-    function renderMenuLayout(menuSchema) {
-      const menuBox = document.getElementById('menu-container');
-      const dataBox = document.getElementById('dynamic-tabs-data');
-      menuBox.innerHTML = ''; dataBox.innerHTML = '';
+    function buildSidebarMenus() {
+      const container = document.getElementById('menu-container');
+      container.innerHTML = "";
+      let targetList = activeUserSession.role === 'Admin' ? adminMenus : (activeUserSession.role === 'Staff' ? staffMenus : studentMenus);
 
-      menuSchema.forEach((menu, idx) => {
-        const menuItem = document.createElement('div');
-        menuItem.className = `menu-item ${idx === 0 ? 'active' : ''}`;
-        menuItem.innerHTML = `<i class="fa-solid ${menu.icon}"></i><span>${menu.name}</span>`;
-        menuItem.onclick = () => {
-          document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-          document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-          menuItem.classList.add('active');
-          document.getElementById(menu.id).classList.add('active');
-          document.getElementById('page-title').innerText = menu.name;
+      targetList.forEach((m, idx) => {
+        let li = document.createElement('li');
+        li.className = "menu-item" + (idx === 0 ? " active" : "");
+        li.innerHTML = `<i class="fa-solid ${m.icon}"></i> <span>${m.name}</span>`;
+        li.onclick = () => switchWorkspaceTab(m.id, li);
+        container.appendChild(li);
+      });
+
+      const tabsRoot = document.getElementById('dynamic-tabs-data');
+      tabsRoot.innerHTML = "";
+      targetList.forEach((m, idx) => {
+        let div = document.createElement('div');
+        div.id = `tab-view-${m.id}`;
+        div.className = "tab-content" + (idx === 0 ? " active" : "");
+        div.innerHTML = m.html;
+        tabsRoot.appendChild(div);
+      });
+
+      if (activeUserSession.role === 'Admin') populateSlotSelectors();
+      if (activeUserSession.role === 'Staff') populateStaffInputs();
+      if (activeUserSession.role === 'Student') renderStudentSelfDashboard();
+    }
+
+    function switchWorkspaceTab(tabId, element) {
+      document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-view-${tabId}`).classList.add('active');
+
+      const currentMenu = [...adminMenus, ...staffMenus, ...studentMenus].find(m => m.id === tabId);
+      document.getElementById('page-title').innerText = currentMenu ? currentMenu.name : "Dashboard";
+    }
+
+    function syncWithGoogleSheet(tabName, headers, payload, action = "SAVE", recordId = "") {
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tabName, headers, payload, action, recordId })
+      }).then(() => console.log(`Sync action finished [${action}] on ${tabName}`))
+        .catch(err => console.error("Sheet sync failed: ", err));
+    }
+
+    function fetchDataFromGoogleSheets() {
+      document.getElementById('page-title').innerText = "Syncing with Cloud Engine...";
+      fetch(GOOGLE_SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+          localStorage.clear();
           
-          Object.keys(editingRowIndices).forEach(k => editingRowIndices[k] = -1);
-          [['btn-usr','Create Account'],['btn-std','Save Entry'],['btn-stf','Save Entry'],['btn-sub','Save Entry'],['btn-alt','Allocate Subject']]
-            .forEach(([id, label]) => { const el = document.getElementById(id); if (el) el.innerText = label; });
+          // Re-map back sheets structural matrices
+          if(data["User_Credentials"]) localStorage.setItem("User_Credentials", JSON.stringify(data["User_Credentials"].slice(1)));
+          if(data["Staff_Registry"]) localStorage.setItem("Staff_Database", JSON.stringify(data["Staff_Registry"].slice(1)));
+          if(data["Subject_Catalog"]) localStorage.setItem("Subject_Database", JSON.stringify(data["Subject_Catalog"].slice(1)));
+          if(data["Subject_Allocation_Matrix"]) localStorage.setItem("Subject_Allocation", JSON.stringify(data["Subject_Allocation_Matrix"].slice(1)));
+          if(data["Timetable_Matrix"]) localStorage.setItem("Timetable_Database", JSON.stringify(data["Timetable_Matrix"].slice(1)));
+          if(data["Legacy_Marks_Ledger"]) localStorage.setItem("Legacy_Marks_Ledger", JSON.stringify(data["Legacy_Marks_Ledger"].slice(1)));
           
-          if(menu.id === 'subject_allotment') loadAllocationDropdowns();
-          if(menu.id === 'timetable_mgmt') loadTimetableManagementEngine();
-          if(menu.id === 'staff_profile') loadStaffProfileAndSubjects();
-          if(menu.id === 'staff_daily_att') prepDailyAttendanceTab();
-          if(menu.id === 'staff_legacy_marks') prepLegacyMarksTab();
-          if(menu.id === 'event_attendance_mgmt') prepEventAttendanceTab();
-          
-          if(menu.id === 'std_profile') renderStudentProfileDesk();
-          if(menu.id === 'std_attendance') renderStudentAttendanceDesk();
-          if(menu.id === 'std_report') renderStudentMarksDesk();
+          // Consolidate dynamic batch students correctly into unified Student_Database array
+          let combinedStudents = [];
+          Object.keys(data).forEach(tabKey => {
+            if(tabKey.indexOf("Students_") === 0) {
+              let rows = data[tabKey].slice(1);
+              rows.forEach(r => combinedStudents.push(r));
+            }
+          });
+          if(combinedStudents.length > 0) localStorage.setItem("Student_Database", JSON.stringify(combinedStudents));
+
+          // Consolidate dynamic attendance records into unified local storage matrices
+          let combinedClassAtt = [];
+          let combinedEventAtt = [];
+          Object.keys(data).forEach(tabKey => {
+            if(tabKey.indexOf("Class_Att_") === 0) {
+              data[tabKey].slice(1).forEach(r => combinedClassAtt.push(r));
+            }
+            if(tabKey.indexOf("Event_Att_") === 0) {
+              data[tabKey].slice(1).forEach(r => combinedEventAtt.push(r));
+            }
+          });
+          localStorage.setItem("Daily_Class_Attendance", JSON.stringify(combinedClassAtt));
+          localStorage.setItem("Event_Internship_Attendance", JSON.stringify(combinedEventAtt));
+
+          let activeMenuId = document.querySelector('.menu-item.active span').innerText;
+          let matchingMenu = [...adminMenus, ...staffMenus, ...studentMenus].find(m => m.name === activeMenuId);
+          document.getElementById('page-title').innerText = matchingMenu ? matchingMenu.name : "Dashboard Matrix";
 
           renderAllTables();
-        };
-        menuBox.appendChild(menuItem);
-
-        const section = document.createElement('div');
-        section.id = menu.id;
-        section.className = `tab-content ${idx === 0 ? 'active' : ''}`;
-        section.innerHTML = menu.html;
-        dataBox.appendChild(section);
-      });
-
-      document.getElementById('page-title').innerText = menuSchema[0].name;
-      if (document.getElementById('std-accom')) toggleHostelFields();
-      if(activeUserSession.role === "STUDENT") renderStudentProfileDesk();
-      else renderAllTables();
-    }
-
-    function prepEventAttendanceTab() {
-      document.getElementById('evt-date').value = new Date().toISOString().split('T')[0];
-      document.getElementById('evt-batch-select').value = "";
-      document.getElementById('evt-desc').value = "";
-      document.getElementById('event-student-list-wrapper').innerHTML = "";
-    }
-
-    function loadEventBatchStudents() {
-      const selectedBatch = document.getElementById('evt-batch-select').value;
-      const wrapper = document.getElementById('event-student-list-wrapper');
-      if(!wrapper || !selectedBatch) return;
-
-      const students = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      let filteredStudents = students.filter((row, idx) => idx > 0 && row[15] === selectedBatch);
-
-      if(filteredStudents.length === 0) {
-        wrapper.innerHTML = `<p style="color:#ef4444;">No student records found for batch '${selectedBatch}'.</p>`;
-        return;
-      }
-
-      let code = `<table class="att-list-table"><thead><tr><th>Roll No</th><th>Name</th><th>Status</th></tr></thead><tbody>`;
-      filteredStudents.forEach(student => {
-        code += `<tr><td><strong>${escapeHtml(student[0])}</strong></td><td>${escapeHtml(student[1])}</td>
-                  <td><button type="button" class="att-status-btn present-state" id="evt-row-btn-${student[0]}" onclick="toggleEventAttendanceRow('${student[0]}')">Present</button></td></tr>`;
-      });
-      code += `</tbody></table>`;
-      wrapper.innerHTML = code;
-    }
-
-    function toggleEventAttendanceRow(stdId) {
-      const btn = document.getElementById(`evt-row-btn-${stdId}`);
-      if(btn.classList.contains('present-state')) {
-        btn.classList.remove('present-state'); btn.classList.add('absent-state'); btn.innerText = "Absent";
-      } else {
-        btn.classList.remove('absent-state'); btn.classList.add('present-state'); btn.innerText = "Present";
-      }
-    }
-
-    function saveEventAttendanceData() {
-      const date = document.getElementById('evt-date').value;
-      const type = document.getElementById('evt-type').value;
-      const batch = document.getElementById('evt-batch-select').value;
-      const desc = document.getElementById('evt-desc').value.trim();
-
-      if(!batch || !desc || !date) return alert("Select batch, date and context description.");
-
-      const students = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      let filteredStudents = students.filter((row, idx) => idx > 0 && row[15] === batch);
-      let eventLedger = JSON.parse(localStorage.getItem("Event_Internship_Attendance")) || [];
-
-      const customSheetTabName = "Event_Att_" + batch.replace("-", "_");
-
-      filteredStudents.forEach(student => {
-        const stdId = student[0];
-        const btn = document.getElementById(`evt-row-btn-${stdId}`);
-        let status = (btn && btn.classList.contains('absent-state')) ? "Absent" : "Present";
-
-        // FIX: resubmitting the same event log for a student previously always appended a
-        // fresh duplicate row with no de-duplication at all.
-        let existingIdx = eventLedger.findIndex(r => r[0] === date && r[2] === desc && r[4] === stdId);
-        let recId = existingIdx !== -1 ? eventLedger[existingIdx][eventLedger[existingIdx].length - 1] : genId();
-        let freshLog = [date, type, desc, batch, stdId, student[1], status, recId];
-
-        if (existingIdx !== -1) {
-          eventLedger[existingIdx] = freshLog;
-          syncWithGoogleSheet(customSheetTabName, eventAttendanceHeaders, freshLog, "UPDATE", recId);
-        } else {
-          eventLedger.push(freshLog);
-          syncWithGoogleSheet(customSheetTabName, eventAttendanceHeaders, freshLog, "SAVE");
-        }
-      });
-
-      localStorage.setItem("Event_Internship_Attendance", JSON.stringify(eventLedger));
-      alert("Event / Internship Attendance committed successfully!");
-      prepEventAttendanceTab();
-      renderAllTables();
-    }
-
-    function renderStudentProfileDesk() {
-      const headerContainer = document.getElementById('student-header-identity');
-      const cardsContainer = document.getElementById('student-profile-cards');
-      if(!cardsContainer || !headerContainer) return;
-
-      const studentDB = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      let row = studentDB.find(r => r[0] === activeUserSession.uid);
-      if(!row) return;
-
-      let photoSrc = row[14]; 
-      let photoHtml = photoSrc ? `<img src="${photoSrc}">` : `<i class="fa-solid fa-user"></i>`;
-      
-      headerContainer.innerHTML = `
-        <div class="student-photo-frame">${photoHtml}</div>
-        <div><h3>${escapeHtml(row[1])}</h3><p>Roll No: ${escapeHtml(row[0])} | Batch: ${escapeHtml(row[15] || 'N/A')}</p></div>
-      `;
-
-      let tags = ["Roll Number", "Name", "Status", "DOB", "Age", "Phone 1", "Phone 2", "Qualification", "10th %", "12th %", "Accommodation", "Hostel Name", "Room No", "Address", "", "Batch Year"];
-      let html = "";
-      for(let i = 0; i < 16; i++) {
-        if(i === 14) continue; 
-        html += `<div class="info-tile"><span>${escapeHtml(tags[i])}</span><p>${escapeHtml(row[i] || "N/A")}</p></div>`;
-      }
-      cardsContainer.innerHTML = html;
-    }
-
-    function renderStudentAttendanceDesk() {
-      const box = document.getElementById('student-attendance-view');
-      if(!box) return;
-
-      const rawAtt = JSON.parse(localStorage.getItem("Daily_Class_Attendance")) || [];
-      let myAtt = rawAtt.filter(r => r[3] === activeUserSession.uid);
-
-      let htmlCode = `<h3>Classroom Attendance Tracker</h3>`;
-      if(myAtt.length === 0) {
-        htmlCode += `<p>No records mapped to your profile.</p>`;
-      } else {
-        let analytics = {};
-        myAtt.forEach(record => {
-          let sub = record[1];
-          if(!analytics[sub]) analytics[sub] = { present: 0, total: 0 };
-          analytics[sub].total++;
-          if(record[5] === "Present") analytics[sub].present++;
+          if (activeUserSession.role === 'Staff') populateStaffInputs();
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('page-title').innerText = "Dashboard Matrix (Offline Mode)";
+          renderAllTables();
         });
-
-        htmlCode += `<table><thead><tr><th>Subject Code</th><th>Total Sessions</th><th>Attended</th><th>Percentage</th></tr></thead><tbody>`;
-        Object.keys(analytics).forEach(sub => {
-          let obj = analytics[sub];
-          let pct = Math.round((obj.present / obj.total) * 100);
-          htmlCode += `<tr><td><strong>${sub}</strong></td><td>${obj.total}</td><td>${obj.present}</td><td><strong>${pct}%</strong></td></tr>`;
-        });
-        htmlCode += `</tbody></table>`;
-      }
-      box.innerHTML = htmlCode;
-    }
-
-    function renderStudentMarksDesk() {
-      const box = document.getElementById('student-marks-view');
-      if(!box) return;
-
-      const marksLedger = JSON.parse(localStorage.getItem("Legacy_Marks_Ledger")) || [];
-      let myScores = marksLedger.filter(r => r[1] === activeUserSession.uid);
-
-      if(myScores.length === 0) {
-        box.innerHTML = `<p>No marks logs finalized yet.</p>`;
-        return;
-      }
-
-      let code = `<table><thead><tr><th>Subject</th><th>CIA 1</th><th>CIA 2</th><th>CIA 3</th><th>Total (100)</th></tr></thead><tbody>`;
-      myScores.forEach(row => {
-        code += `<tr><td><strong>${row[0]}</strong></td><td>${row[3]}</td><td>${row[4]}</td><td>${row[5]}</td><td><strong>${row[9]}</strong></td></tr>`;
-      });
-      code += `</tbody></table>`;
-      box.innerHTML = code;
-    }
-
-    function prepDailyAttendanceTab() {
-      document.getElementById('cls-date').value = new Date().toISOString().split('T')[0];
-      const dropdown = document.getElementById('cls-sub-code');
-      const allocations = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
-      let myAllocations = allocations.filter((row, idx) => idx > 0 && row[0] === activeUserSession.uid);
-      
-      dropdown.innerHTML = "";
-      myAllocations.forEach(alloc => {
-        dropdown.innerHTML += `<option value="${alloc[2]}">${alloc[2]} - ${alloc[3]}</option>`;
-      });
-      onSubjectChange();
-    }
-
-    function onSubjectChange() {
-      checkExistingAttendanceToday();
-      generateSimpleAttendanceList();
-    }
-
-    function checkExistingAttendanceToday() {
-      const date = document.getElementById('cls-date').value;
-      const subCode = document.getElementById('cls-sub-code').value;
-      const alertBox = document.getElementById('duplicate-att-alert');
-      const submitBtn = document.getElementById('btn-commit-att');
-      if (!subCode || !date) return;
-
-      const attendanceLedger = JSON.parse(localStorage.getItem("Daily_Class_Attendance")) || [];
-      let existRecord = attendanceLedger.find(r => r[0] === date && r[1] === subCode);
-
-      if (existRecord) {
-        alertBox.innerHTML = `Warning: Attendance for ${subCode} already submitted for today (${date}).`;
-        alertBox.style.display = 'block'; submitBtn.disabled = true; submitBtn.style.opacity = '0.5';
-      } else {
-        alertBox.style.display = 'none'; submitBtn.disabled = false; submitBtn.style.opacity = '1';
-      }
-    }
-
-    function generateSimpleAttendanceList() {
-      const wrapper = document.getElementById('simple-attendance-list-wrapper');
-      if(!wrapper) return;
-
-      const students = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      if(students.length <= 1) {
-        wrapper.innerHTML = `<p>No students logged in database.</p>`;
-        return;
-      }
-
-      let code = `<table class="att-list-table"><thead><tr><th>Roll No</th><th>Name</th><th>Status</th></tr></thead><tbody>`;
-      for(let i = 1; i < students.length; i++) {
-        code += `<tr><td><strong>${escapeHtml(students[i][0])}</strong></td><td>${escapeHtml(students[i][1])}</td>
-                  <td><button type="button" class="att-status-btn present-state" id="att-row-btn-${students[i][0]}" onclick="toggleSimpleAttendanceRow('${students[i][0]}')">Present</button></td></tr>`;
-      }
-      code += `</tbody></table>`;
-      wrapper.innerHTML = code;
-    }
-
-    function toggleSimpleAttendanceRow(stdId) {
-      const btn = document.getElementById(`att-row-btn-${stdId}`);
-      if(btn.classList.contains('present-state')) {
-        btn.classList.remove('present-state'); btn.classList.add('absent-state'); btn.innerText = "Absent";
-      } else {
-        btn.classList.remove('absent-state'); btn.classList.add('present-state'); btn.innerText = "Present";
-      }
-    }
-
-    function prepLegacyMarksTab() {
-      const dropdown = document.getElementById('leg-sub-code');
-      const allocations = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
-      let myAllocations = allocations.filter((row, idx) => idx > 0 && row[0] === activeUserSession.uid);
-      
-      dropdown.innerHTML = '<option value="">-- Choose Subject --</option>';
-      myAllocations.forEach(alloc => {
-        dropdown.innerHTML += `<option value="${alloc[2]}">${alloc[2]} - ${alloc[3]}</option>`;
-      });
-    }
-
-    function runLiveCalculation(stdId) {
-      let c1 = parseFloat(document.getElementById(`l-cia1-${stdId}`).value) || 0;
-      let c2 = parseFloat(document.getElementById(`l-cia2-${stdId}`).value) || 0;
-      let c3 = parseFloat(document.getElementById(`l-cia3-${stdId}`).value) || 0;
-      let as = parseFloat(document.getElementById(`l-assg-${stdId}`).value) || 0;
-      let at = parseFloat(document.getElementById(`l-attn-${stdId}`).value) || 0;
-      let se = parseFloat(document.getElementById(`l-sem-${stdId}`).value) || 0;
-
-      let sortedCia = [c1, c2, c3].sort((x, y) => y - x);
-      let grandTotal = ((sortedCia[0] + sortedCia[1]) / 100) * 40 + as + at + (se / 2);
-      document.getElementById(`l-total-${stdId}`).value = Math.round(grandTotal * 100) / 100;
-    }
-
-    function generateLegacyMarksTemplate() {
-      const subCode = document.getElementById('leg-sub-code').value;
-      const wrapper = document.getElementById('legacy-marks-matrix-wrapper');
-      if(!wrapper || !subCode) return;
-
-      const students = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      let code = `<table><thead><tr><th>Roll No</th><th>Name</th><th>CIA 1</th><th>CIA 2</th><th>CIA 3</th><th>Assg</th><th>Attn</th><th>Sem</th><th>Total</th></tr></thead><tbody>`;
-      
-      for(let i = 1; i < students.length; i++) {
-        let stdId = students[i][0];
-        code += `<tr><td><strong>${escapeHtml(stdId)}</strong></td><td>${escapeHtml(students[i][1])}</td>
-                  <td><input type="number" id="l-cia1-${stdId}" oninput="runLiveCalculation('${stdId}')" style="width:60px;"></td>
-                  <td><input type="number" id="l-cia2-${stdId}" oninput="runLiveCalculation('${stdId}')" style="width:60px;"></td>
-                  <td><input type="number" id="l-cia3-${stdId}" oninput="runLiveCalculation('${stdId}')" style="width:60px;"></td>
-                  <td><input type="number" id="l-assg-${stdId}" oninput="runLiveCalculation('${stdId}')" style="width:50px;"></td>
-                  <td><input type="number" id="l-attn-${stdId}" oninput="runLiveCalculation('${stdId}')" style="width:50px;"></td>
-                  <td><input type="number" id="l-sem-${stdId}" oninput="runLiveCalculation('${stdId}')" style="width:60px;"></td>
-                  <td><input type="number" id="l-total-${stdId}" readonly style="width:70px; background:#f0fdf4;"></td></tr>`;
-      }
-      code += `</tbody></table>`;
-      wrapper.innerHTML = code;
-    }
-
-    function saveLegacyMarksLedger() {
-      const subCode = document.getElementById('leg-sub-code').value;
-      if(!subCode) return alert("Select subject context.");
-
-      const students = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      let db = JSON.parse(localStorage.getItem("Legacy_Marks_Ledger")) || [];
-
-      for(let i = 1; i < students.length; i++) {
-        const id = students[i][0];
-        const totalEl = document.getElementById(`l-total-${id}`);
-        if (!totalEl) continue;
-
-        let freshRow = [subCode, id, students[i][1], parseFloat(document.getElementById(`l-cia1-${id}`).value)||0, parseFloat(document.getElementById(`l-cia2-${id}`).value)||0, parseFloat(document.getElementById(`l-cia3-${id}`).value)||0, parseFloat(document.getElementById(`l-assg-${id}`).value)||0, parseFloat(document.getElementById(`l-attn-${id}`).value)||0, parseFloat(document.getElementById(`l-sem-${id}`).value)||0, parseFloat(totalEl.value)||0, activeUserSession.uid];
-
-        // FIX: previously this always appended a new row, so re-entering / correcting marks
-        // for the same subject+student piled up duplicate mark rows forever.
-        let existingIdx = db.findIndex(r => r[0] === subCode && r[1] === id);
-        let recId = existingIdx !== -1 ? db[existingIdx][db[existingIdx].length - 1] : genId();
-        freshRow.push(recId);
-
-        if (existingIdx !== -1) {
-          db[existingIdx] = freshRow;
-          syncWithGoogleSheet("Legacy_Marks_Ledger", legacyMarksHeaders, freshRow, "UPDATE", recId);
-        } else {
-          db.push(freshRow);
-          syncWithGoogleSheet("Legacy_Marks_Ledger", legacyMarksHeaders, freshRow, "SAVE");
-        }
-      }
-
-      localStorage.setItem("Legacy_Marks_Ledger", JSON.stringify(db));
-      alert("Marks saved successfully!");
-      renderAllTables();
-    }
-
-    function loadTimetableManagementEngine() {
-      const periodSelect = document.getElementById('tt-period');
-      periodSelect.innerHTML = "";
-      timeSlots.filter(s => s.type === "period").forEach(p => {
-        periodSelect.innerHTML += `<option value="${p.id}">${p.label}</option>`;
-      });
-
-      const allocSelect = document.getElementById('tt-alloc-id');
-      const subjects = JSON.parse(localStorage.getItem("Subject_Database")) || [];
-      allocSelect.innerHTML = '<option value="">-- Select Subject --</option>';
-      for(let i=1; i<subjects.length; i++) {
-        allocSelect.innerHTML += `<option value="${subjects[i][0]}">${subjects[i][0]} - ${subjects[i][1]}</option>`;
-      }
-      updateStaffDropdownForTimetable();
-      renderMasterTimetableGrid();
-    }
-
-    function updateStaffDropdownForTimetable() {
-      const subCode = document.getElementById('tt-alloc-id').value;
-      const staffSelect = document.getElementById('tt-staff-id');
-      staffSelect.innerHTML = "";
-
-      const allocations = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
-      let mappedStaffs = allocations.filter((row, idx) => idx > 0 && row[2] === subCode);
-
-      mappedStaffs.forEach(alloc => {
-        staffSelect.innerHTML += `<option value="${alloc[0]}" data-name="${alloc[1]}">${alloc[0]} - ${alloc[1]}</option>`;
-      });
-    }
-
-    function saveTimetableCell() {
-      const day = document.getElementById('tt-day').value;
-      const period = document.getElementById('tt-period').value;
-      const subCode = document.getElementById('tt-alloc-id').value;
-      const staffEl = document.getElementById('tt-staff-id');
-
-      if(!subCode || !staffEl.value) return alert("Select Subject and Staff.");
-
-      const staffName = staffEl.options[staffEl.selectedIndex].getAttribute('data-name');
-      let timetableMatrix = JSON.parse(localStorage.getItem("Timetable_Matrix")) || {};
-      if(!timetableMatrix[day]) timetableMatrix[day] = {};
-
-      let existing = timetableMatrix[day][period];
-      let recId = (existing && existing.recordId) ? existing.recordId : genId();
-
-      timetableMatrix[day][period] = { subCode: subCode, staffName: staffName, recordId: recId };
-      localStorage.setItem("Timetable_Matrix", JSON.stringify(timetableMatrix));
-
-      // FIX: the timetable was previously never sent to syncWithGoogleSheet at all -- it only
-      // ever existed in the admin's own browser, so staff/students never actually saw it.
-      const payload = [day, period, subCode, staffName, recId];
-      syncWithGoogleSheet("Timetable_Matrix", timetableHeaders, payload, existing ? "UPDATE" : "SAVE", recId);
-
-      alert("Slot locked into timetable matrix!");
-      renderMasterTimetableGrid();
-    }
-
-    function renderMasterTimetableGrid() {
-      const container = document.getElementById('timetable-master-preview');
-      if(!container) return;
-
-      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-      let timetableMatrix = JSON.parse(localStorage.getItem("Timetable_Matrix")) || {};
-
-      let html = `<div class="tt-grid"><div class="tt-header">Day / Slots</div>`;
-      timeSlots.forEach(s => { html += `<div class="tt-header">${s.label}</div>`; });
-
-      days.forEach(day => {
-        html += `<div class="tt-cell tt-day">${day}</div>`;
-        timeSlots.forEach(slotConf => {
-          if(slotConf.type === "break") {
-            html += `<div class="tt-cell tt-break">${slotConf.label}</div>`;
-          } else {
-            let cellData = timetableMatrix[day] && timetableMatrix[day][slotConf.id];
-            if(cellData) {
-              html += `<div class="tt-cell"><div class="tt-subject-title">${cellData.subCode}</div><div class="tt-staff-lbl">${cellData.staffName}</div></div>`;
-            } else {
-              html += `<div class="tt-cell" style="color:#cbd5e1;">Free</div>`;
-            }
-          }
-        });
-      });
-      html += `</div>`;
-      container.innerHTML = html;
-    }
-
-    function loadStaffProfileAndSubjects() {
-      if(document.getElementById('stf-profile-details')) {
-        document.getElementById('stf-profile-details').innerHTML = `<p><strong>ID:</strong> ${escapeHtml(activeUserSession.uid)}</p><p><strong>Name:</strong> ${escapeHtml(activeUserSession.name)}</p>`;
-      }
-      const viewContainer = document.getElementById('table-Staff_Subject_View');
-      if(!viewContainer) return;
-
-      const allocations = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
-      let myAllocations = allocations.filter((row, idx) => idx > 0 && row[0] === activeUserSession.uid);
-
-      let code = "<table><thead><tr><th>Subject Code</th><th>Subject Name</th></tr></thead><tbody>";
-      myAllocations.forEach(alloc => { code += `<tr><td><strong>${escapeHtml(alloc[2])}</strong></td><td>${escapeHtml(alloc[3])}</td></tr>`; });
-      code += "</tbody></table>";
-      viewContainer.innerHTML = code;
-    }
-
-    function loadAllocationDropdowns() {
-      const staffSelect = document.getElementById('alt-stf-id');
-      const subSelect = document.getElementById('alt-sub-code');
-      const staffs = JSON.parse(localStorage.getItem("Staff_Database")) || [];
-      const subjects = JSON.parse(localStorage.getItem("Subject_Database")) || [];
-      
-      staffSelect.innerHTML = ""; subSelect.innerHTML = "";
-      for(let i=1; i<staffs.length; i++) staffSelect.innerHTML += `<option value="${staffs[i][0]}" data-name="${staffs[i][1]}">${staffs[i][0]} - ${staffs[i][1]}</option>`;
-      for(let i=1; i<subjects.length; i++) subSelect.innerHTML += `<option value="${subjects[i][0]}" data-name="${subjects[i][1]}">${subjects[i][0]} - ${subjects[i][1]}</option>`;
-    }
-
-    function initiateRowModification(tblKey, rowIdx) {
-      editingRowIndices[tblKey] = rowIdx;
-      let matrix = JSON.parse(localStorage.getItem(tblKey)) || [];
-      let targetRow = matrix[rowIdx];
-
-      if(tblKey === "User_Credentials") {
-        document.getElementById('usr-type').value = targetRow[0];
-        document.getElementById('usr-id').value = targetRow[1];
-        document.getElementById('usr-pass').value = targetRow[2];
-        document.getElementById('btn-usr').innerText = "Update Account";
-      } else if(tblKey === "Staff_Database") {
-        document.getElementById('stf-id').value = targetRow[0];
-        document.getElementById('stf-name').value = targetRow[1];
-        document.getElementById('stf-dept').value = targetRow[2];
-        document.getElementById('stf-mobile').value = targetRow[3];
-        document.getElementById('btn-stf').innerText = "Update Entry";
-      } else if(tblKey === "Subject_Database") {
-        document.getElementById('sub-code').value = targetRow[0];
-        document.getElementById('sub-name').value = targetRow[1];
-        document.getElementById('sub-type').value = targetRow[2];
-        document.getElementById('sub-hours').value = targetRow[3];
-        document.getElementById('sub-sem').value = targetRow[4];
-        document.getElementById('btn-sub').innerText = "Update Entry";
-      } else if(tblKey === "Subject_Allocation") {
-        loadAllocationDropdowns();
-        document.getElementById('alt-stf-id').value = targetRow[0];
-        document.getElementById('alt-sub-code').value = targetRow[2];
-        document.getElementById('btn-alt').innerText = "Update Allocation";
-      } else if(tblKey === "Student_Database") {
-        document.getElementById('std-id').value = targetRow[0];
-        document.getElementById('std-name').value = targetRow[1];
-        document.getElementById('std-status').value = targetRow[2];
-        document.getElementById('std-batch').value = targetRow[15] || "2026-2028";
-        document.getElementById('std-dob').value = targetRow[3];
-        document.getElementById('std-age').value = targetRow[4];
-        document.getElementById('std-p1').value = targetRow[5];
-        document.getElementById('std-p2').value = targetRow[6];
-        document.getElementById('std-qual').value = targetRow[7];
-        document.getElementById('std-10th').value = targetRow[8];
-        document.getElementById('std-12th').value = targetRow[9];
-        document.getElementById('std-accom').value = targetRow[10];
-        document.getElementById('std-hname').value = targetRow[11];
-        document.getElementById('std-rno').value = targetRow[12];
-        document.getElementById('std-addr').value = targetRow[13];
-        tempBase64Image = targetRow[14] || "";
-        toggleHostelFields();
-        document.getElementById('btn-std').innerText = "Update Entry";
-      }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function triggerProfessionalApplicationPrint(rowIdx) {
-      const db = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      const student = db[rowIdx];
-      if(!student) return;
-
-      const printWindow = window.open('', '_blank');
-      let photoCode = student[14] ? `<img src="${student[14]}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="text-align:center; padding-top:45px;">No Photo</div>`;
-
-      const appContent = `<html><body><div style="padding:40px; border:2px solid #000;">
-        <h2>SWATI Women's Program - Application Form</h2>
-        <div style="width:115px; height:135px; border:1px solid #000; float:right;">${photoCode}</div>
-        <p><strong>Roll No:</strong> ${escapeHtml(student[0])}</p><p><strong>Name:</strong> ${escapeHtml(student[1])}</p>
-        <p><strong>Status:</strong> ${escapeHtml(student[2])}</p><p><strong>DOB:</strong> ${escapeHtml(student[3])}</p>
-        <p><strong>Batch:</strong> ${escapeHtml(student[15] || 'N/A')}</p>
-        <button onclick="window.print()" style="margin-top:20px;">Print Application</button>
-      </div></body></html>`;
-
-      printWindow.document.write(appContent); printWindow.document.close();
-    }
-
-    // Looks for an existing row with the same natural-key value (e.g. same Student ID) so
-    // duplicate records can't silently pile up. Returns -1 if there's no clash.
-    function findDuplicateIndex(tblKey, idColIndex, idValue) {
-      let db = JSON.parse(localStorage.getItem(tblKey)) || [];
-      for (let i = 1; i < db.length; i++) {
-        if (db[i][idColIndex] === idValue) return i;
-      }
-      return -1;
-    }
-
-    // Generic add-or-update: if editingRowIndices[tblKey] points at a real row, this UPDATEs
-    // that row in place (both locally and in the Google Sheet, matched by Record ID). Otherwise
-    // it appends a brand new row with a freshly generated Record ID. This replaces the old
-    // behaviour where "editing" a row just relabeled a button but Save always appended a
-    // duplicate row with no way to actually overwrite the original.
-    function commitRecord(tblKey, headers, rowData, sheetTabResolver) {
-      let db = JSON.parse(localStorage.getItem(tblKey)) || [headers];
-      let editIdx = editingRowIndices[tblKey];
-
-      if (editIdx !== undefined && editIdx !== -1 && db[editIdx]) {
-        let existingId = db[editIdx][db[editIdx].length - 1];
-        let fullRow = rowData.concat([existingId]);
-        db[editIdx] = fullRow;
-        localStorage.setItem(tblKey, JSON.stringify(db));
-        syncWithGoogleSheet(sheetTabResolver(fullRow), headers, fullRow, "UPDATE", existingId);
-      } else {
-        let fullRow = rowData.concat([genId()]);
-        db.push(fullRow);
-        localStorage.setItem(tblKey, JSON.stringify(db));
-        syncWithGoogleSheet(sheetTabResolver(fullRow), headers, fullRow, "SAVE");
-      }
-      editingRowIndices[tblKey] = -1;
-      renderAllTables();
-    }
-
-    function saveUserData() {
-      const type = document.getElementById('usr-type').value;
-      const uid = document.getElementById('usr-id').value.trim();
-      const pass = document.getElementById('usr-pass').value.trim();
-      if(!uid || !pass) return alert("Fill all account data.");
-
-      const dupIdx = findDuplicateIndex("User_Credentials", 1, uid);
-      if (dupIdx !== -1 && dupIdx !== editingRowIndices.User_Credentials) {
-        return alert("This User ID already exists. Choose a different ID, or use Edit on the existing account.");
-      }
-
-      // FIX: this previously only ever saved to localStorage, so accounts created on one
-      // browser could never log in from any other device -- they never reached the Sheet.
-      commitRecord("User_Credentials", userHeaders, [type, uid, pass], () => "User_Credentials");
-
-      document.getElementById('usr-id').value = "";
-      document.getElementById('usr-pass').value = "";
-      document.getElementById('btn-usr').innerText = "Create Account";
-    }
-
-    function saveStudentData() {
-      const studentBatchSelection = document.getElementById('std-batch').value;
-      const rowData = [
-        document.getElementById('std-id').value.trim(), document.getElementById('std-name').value.trim(),
-        document.getElementById('std-status').value, document.getElementById('std-dob').value, 
-        document.getElementById('std-age').value.trim(), document.getElementById('std-p1').value.trim(), 
-        document.getElementById('std-p2').value.trim(), document.getElementById('std-qual').value.trim(), 
-        document.getElementById('std-10th').value.trim(), document.getElementById('std-12th').value.trim(), 
-        document.getElementById('std-accom').value, document.getElementById('std-hname').value.trim() || "N/A", 
-        document.getElementById('std-rno').value.trim() || "N/A", document.getElementById('std-addr').value.trim(),
-        tempBase64Image || "", studentBatchSelection
-      ];
-      if(!rowData[0] || !rowData[1]) return alert("ID and Name are mandatory.");
-
-      const dupIdx = findDuplicateIndex("Student_Database", 0, rowData[0]);
-      if (dupIdx !== -1 && dupIdx !== editingRowIndices.Student_Database) {
-        return alert("This Student ID already exists. Choose a different ID, or use Edit on the existing student.");
-      }
-
-      const dynamicStudentTab = "Students_" + studentBatchSelection.replace("-", "_");
-      commitRecord("Student_Database", studentHeaders, rowData, () => dynamicStudentTab);
-      resetStudentForm();
-    }
-
-    function resetStudentForm() {
-      ["std-id","std-name","std-dob","std-age","std-p1","std-p2","std-qual","std-10th","std-12th","std-hname","std-rno","std-addr"]
-        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
-      document.getElementById('std-status').value = "Active";
-      document.getElementById('std-accom').value = "Dayscholar";
-      document.getElementById('std-photo').value = "";
-      tempBase64Image = ""; // FIX: previously never reset, so the NEXT student saved without
-                             // picking a new photo would silently inherit the last student's photo.
-      toggleHostelFields();
-      document.getElementById('btn-std').innerText = "Save Entry";
-    }
-
-    function saveStaffData() {
-      const id = document.getElementById('stf-id').value.trim();
-      const name = document.getElementById('stf-name').value.trim();
-      const dept = document.getElementById('stf-dept').value.trim();
-      const mobile = document.getElementById('stf-mobile').value.trim();
-      if(!id || !name) return alert("Staff ID and Name are mandatory.");
-
-      const dupIdx = findDuplicateIndex("Staff_Database", 0, id);
-      if (dupIdx !== -1 && dupIdx !== editingRowIndices.Staff_Database) {
-        return alert("This Staff ID already exists. Choose a different ID, or use Edit on the existing staff member.");
-      }
-
-      commitRecord("Staff_Database", staffHeaders, [id, name, dept, mobile], () => "Staff_Registry");
-
-      document.getElementById('stf-id').value = ""; document.getElementById('stf-name').value = "";
-      document.getElementById('stf-dept').value = ""; document.getElementById('stf-mobile').value = "";
-      document.getElementById('btn-stf').innerText = "Save Entry";
-    }
-
-    function saveSubjectData() {
-      const code = document.getElementById('sub-code').value.trim();
-      const name = document.getElementById('sub-name').value.trim();
-      const type = document.getElementById('sub-type').value;
-      const hours = document.getElementById('sub-hours').value.trim();
-      const sem = document.getElementById('sub-sem').value;
-      if(!code || !name) return alert("Subject Code and Name are mandatory.");
-
-      const dupIdx = findDuplicateIndex("Subject_Database", 0, code);
-      if (dupIdx !== -1 && dupIdx !== editingRowIndices.Subject_Database) {
-        return alert("This Subject Code already exists. Choose a different code, or use Edit on the existing subject.");
-      }
-
-      commitRecord("Subject_Database", subjectHeaders, [code, name, type, hours, sem], () => "Subject_Catalog");
-
-      document.getElementById('sub-code').value = ""; document.getElementById('sub-name').value = "";
-      document.getElementById('sub-hours').value = "";
-      document.getElementById('btn-sub').innerText = "Save Entry";
-    }
-
-    function saveSubjectAllocation() {
-      const staffEl = document.getElementById('alt-stf-id');
-      const subEl = document.getElementById('alt-sub-code');
-      if(!staffEl.value || !subEl.value) return alert("Select both a staff member and a subject.");
-
-      const rowData = [staffEl.value, staffEl.options[staffEl.selectedIndex].getAttribute('data-name'), subEl.value, subEl.options[subEl.selectedIndex].getAttribute('data-name')];
-
-      let db = JSON.parse(localStorage.getItem("Subject_Allocation")) || [allocationHeaders];
-      let dupIdx = -1;
-      for(let i = 1; i < db.length; i++) { if(db[i][0] === rowData[0] && db[i][2] === rowData[2]) { dupIdx = i; break; } }
-      if (dupIdx !== -1 && dupIdx !== editingRowIndices.Subject_Allocation) {
-        return alert("This staff member is already allocated to this subject.");
-      }
-
-      commitRecord("Subject_Allocation", allocationHeaders, rowData, () => "Subject_Allocation_Matrix");
-      document.getElementById('btn-alt').innerText = "Allocate Subject";
-    }
-
-    function saveDailyClassAttendance() {
-      const attDate = document.getElementById('cls-date').value;
-      const subCode = document.getElementById('cls-sub-code').value;
-      const semester = document.getElementById('cls-sem').value;
-
-      if(!subCode) return alert("Select subject layout.");
-      if(!attDate) return alert("Select a date.");
-
-      const students = JSON.parse(localStorage.getItem("Student_Database")) || [];
-      let attendanceLedger = JSON.parse(localStorage.getItem("Daily_Class_Attendance")) || [];
-      const dynamicAttTabName = "Class_Att_" + subCode + "_" + semester;
-
-      for(let i = 1; i < students.length; i++) {
-        const stdId = students[i][0];
-        const btn = document.getElementById(`att-row-btn-${stdId}`);
-        let status = (btn && btn.classList.contains('absent-state')) ? "Absent" : "Present";
-
-        // Re-submitting attendance for the same date+subject+student updates the row locally
-        // too (previously this always pushed a fresh duplicate into local storage even though
-        // the backend was smart enough to update the Sheet row in place).
-        let existingIdx = attendanceLedger.findIndex(r => r[0] === attDate && r[1] === subCode && r[3] === stdId);
-        let recId = existingIdx !== -1 ? attendanceLedger[existingIdx][attendanceLedger[existingIdx].length - 1] : genId();
-
-        let freshRow = [attDate, subCode, semester, stdId, students[i][1], status, activeUserSession.uid, recId];
-        if (existingIdx !== -1) attendanceLedger[existingIdx] = freshRow; else attendanceLedger.push(freshRow);
-        syncWithGoogleSheet(dynamicAttTabName, dailyAttendanceHeaders, freshRow, "SAVE");
-      }
-
-      localStorage.setItem("Daily_Class_Attendance", JSON.stringify(attendanceLedger));
-      alert("Attendance records securely archived!");
-      generateSimpleAttendanceList();
-      renderAllTables();
-    }
-
-    function autoCalculateAge() {
-      const dobValue = document.getElementById('std-dob').value;
-      if (!dobValue) return;
-      let age = new Date().getFullYear() - new Date(dobValue).getFullYear();
-      document.getElementById('std-age').value = age >= 0 ? age : 0;
-    }
-
-    function toggleHostelFields() {
-      const type = document.getElementById('std-accom').value;
-      document.getElementById('std-hname').disabled = (type !== 'Hostel');
-      document.getElementById('std-rno').disabled = (type !== 'Hostel');
-    }
-
-    // Real header labels for the tables that don't carry their own header row locally
-    // (previously these three rendered literal placeholder text "Col 1", "Col 2"... instead
-    // of actual column names).
-    const headerlessTableHeaders = {
-      Daily_Class_Attendance: dailyAttendanceHeaders,
-      Legacy_Marks_Ledger: legacyMarksHeaders,
-      Event_Internship_Attendance: eventAttendanceHeaders
-    };
-    const editableTables = ["User_Credentials", "Student_Database", "Staff_Database", "Subject_Database", "Subject_Allocation"];
-
-    // Resolves which Google Sheet tab a given local row belongs to. Used for both UPDATE and
-    // DELETE so a row is always targeted at the correct tab (previously Subject_Allocation,
-    // User_Credentials, Daily_Class_Attendance, Legacy_Marks_Ledger and
-    // Event_Internship_Attendance all silently fell through to a nonexistent "General_Data" tab).
-    function sheetTabForKey(tblKey, rowData) {
-      switch (tblKey) {
-        case "Student_Database": return "Students_" + (rowData[15] || "2026-2028").replace("-", "_");
-        case "Staff_Database": return "Staff_Registry";
-        case "Subject_Database": return "Subject_Catalog";
-        case "Subject_Allocation": return "Subject_Allocation_Matrix";
-        case "User_Credentials": return "User_Credentials";
-        case "Daily_Class_Attendance": return "Class_Att_" + rowData[1] + "_" + rowData[2];
-        case "Legacy_Marks_Ledger": return "Legacy_Marks_Ledger";
-        case "Event_Internship_Attendance": return "Event_Att_" + (rowData[3] || "").replace("-", "_");
-        default: return null;
-      }
     }
 
     function renderAllTables() {
-      let activeTables = [];
-      if(activeUserSession.role === "ADMIN") {
-        activeTables = ["User_Credentials", "Student_Database", "Staff_Database", "Subject_Database", "Subject_Allocation", "Event_Internship_Attendance:table-Event_Internship_Attendance"];
-      } else if(activeUserSession.role === "STAFF") {
-        activeTables = ["Daily_Class_Attendance:table-Daily_Attendance_Ledger", "Legacy_Marks_Ledger:table-Legacy_Marks_Ledger"];
-      } else return;
-      
-      activeTables.forEach(item => {
-        let parts = item.split(':'); let tblKey = parts[0]; let targetId = parts[1] || "table-" + tblKey;
-        const box = document.getElementById(targetId); if(!box) return;
-
-        let matrix = JSON.parse(localStorage.getItem(tblKey)) || [];
-        let headerless = (tblKey === "Daily_Class_Attendance" || tblKey === "Legacy_Marks_Ledger" || tblKey === "Event_Internship_Attendance");
-        let startIdx = headerless ? 0 : 1;
-
-        if(matrix.length <= startIdx) {
-          box.innerHTML = `<p style="color:#94a3b8; font-size:13px;">No local engine dataset ledger found.</p>`; return;
-        }
-
-        // Row indices to actually display. Student_Database supports the search bar
-        // (previously the search box existed in the UI but did nothing at all).
-        let rowIndices = [];
-        for (let r = startIdx; r < matrix.length; r++) rowIndices.push(r);
-
-        if (tblKey === "Student_Database") {
-          const searchEl = document.getElementById('student-search-bar');
-          const q = searchEl ? searchEl.value.trim().toLowerCase() : "";
-          if (q) {
-            rowIndices = rowIndices.filter(r => {
-              const row = matrix[r];
-              return String(row[0] || "").toLowerCase().includes(q) || String(row[1] || "").toLowerCase().includes(q);
-            });
-          }
-        }
-
-        if (rowIndices.length === 0) {
-          box.innerHTML = `<p style="color:#94a3b8; font-size:13px;">No matching records found.</p>`; return;
-        }
-
-        let code = "<table><thead><tr>";
-        // FIX: previously headerless tables rendered literal placeholder text "Col 1".."Col 10"
-        // instead of real column names.
-        let headersToUse = headerless ? headerlessTableHeaders[tblKey] : matrix[0];
-        headersToUse.slice(0, -1).forEach(h => code += `<th>${escapeHtml(h)}</th>`); // last col is the internal Record ID, hidden
-        code += "<th>Actions</th></tr></thead><tbody>";
-
-        rowIndices.forEach(r => {
-          code += "<tr>";
-          matrix[r].slice(0, -1).forEach(cell => code += `<td>${escapeHtml(cell)}</td>`);
-
-          let printBtn = (tblKey === "Student_Database") ? `<button class="btn-table-print" onclick="triggerProfessionalApplicationPrint(${r})">Print</button>` : "";
-          let editBtn = editableTables.includes(tblKey) ? `<button class="btn-table-edit" onclick="initiateRowModification('${tblKey}', ${r})">Edit</button>` : "";
-          code += `<td><div class="actions-cell-flex">
-            ${editBtn}
-            <button class="btn-table-del" onclick="triggerUniversalDelete('${tblKey}', ${r})">Delete</button>
-            ${printBtn}
-          </div></td></tr>`;
-        });
-        code += "</tbody></table>"; box.innerHTML = code;
-      });
+      renderGenericTable("User_Credentials", ["Account Type", "User ID", "Password", "Record ID"]);
+      renderGenericTable("Student_Database", studentHeaders);
+      renderGenericTable("Staff_Database", staffHeaders);
+      renderGenericTable("Subject_Database", subjectHeaders);
+      renderGenericTable("Subject_Allocation", allocationHeaders);
+      if(activeUserSession.role === 'Admin') renderTimetableGridPane();
     }
 
-    function triggerUniversalDelete(tblKey, rowIdx) {
+    function checkExistingAttendance() {
+      const dateInput = document.getElementById('att-date').value;
+      const subjectCode = document.getElementById('att-subject').value;
+      const period = document.getElementById('att-period').value;
+      const warningDiv = document.getElementById('attendance-warning');
+      const submitBtn = document.getElementById('submit-attendance-btn');
+
+      if (!dateInput || !subjectCode || !period) return;
+
+      let dailyAttMatrix = JSON.parse(localStorage.getItem("Daily_Class_Attendance")) || [];
+      
+      // Look for a matching row that checks for Date, Subject AND specific Period Slot
+      let duplicateFound = dailyAttMatrix.some(row => {
+        let rowDate = row[0];
+        let rowSub = row[1];
+        let rowPeriod = row[2];
+        return (rowDate === dateInput && rowSub === subjectCode && rowPeriod === period);
+      });
+
+      if (duplicateFound) {
+        warningDiv.style.display = 'block';
+        warningDiv.innerText = `Warning: Attendance for ${subjectCode} (${period}) has already been submitted for ${dateInput}! Selection locked.`;
+        if(submitBtn) submitBtn.disabled = true;
+      } else {
+        warningDiv.style.display = 'none';
+        if(submitBtn) submitBtn.disabled = false;
+      }
+    }
+
+    function renderGenericTable(storageKey, headers) {
+      const wrapper = document.getElementById(`table-${storageKey}`);
+      if (!wrapper) return;
+
+      let matrix = JSON.parse(localStorage.getItem(storageKey)) || [];
+      
+      if (storageKey === "Student_Database") {
+        const query = document.getElementById('student-search-bar')?.value.toLowerCase();
+        if (query) {
+          matrix = matrix.filter(row => row[0].toLowerCase().includes(query) || row[1].toLowerCase().includes(query));
+        }
+      }
+
+      let html = `<table><thead><tr>`;
+      headers.forEach(h => { if(h !== "PhotoData" && h !== "Record ID") html += `<th>${h}</th>`; });
+      if (activeUserSession.role === 'Admin') html += `<th>Management Actions</th>`;
+      html += `</tr></thead><tbody>`;
+
+      matrix.forEach((row, rowIdx) => {
+        html += `<tr>`;
+        headers.forEach((h, colIdx) => {
+          if(h !== "PhotoData" && h !== "Record ID") {
+            html += `<td>${escapeHtml(row[colIdx])}</td>`;
+          }
+        });
+        if (activeUserSession.role === 'Admin') {
+          html += `<td><div class="actions-cell-flex">
+            <button class="btn-table-edit" onclick="universalEdit('${storageKey}', ${rowIdx})">Edit</button>
+            <button class="btn-table-del" onclick="universalDelete('${storageKey}', ${rowIdx})">Delete</button>
+          </div></td>`;
+        }
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table>`;
+      wrapper.innerHTML = matrix.length === 0 ? `<p style="color:var(--slate-500);text-align:center;padding:20px;">No institutional data entries found inside local stack.</p>` : html;
+    }
+
+    function universalEdit(tblKey, rowIdx) {
+      editingRowIndices[tblKey] = rowIdx;
+      let matrix = JSON.parse(localStorage.getItem(tblKey));
+      let rowData = matrix[rowIdx];
+
+      if (tblKey === "User_Credentials") {
+        document.getElementById('usr-type').value = rowData[0];
+        document.getElementById('usr-id').value = rowData[1];
+        document.getElementById('usr-pass').value = rowData[2];
+        document.getElementById('btn-usr').innerText = "Update Credentials";
+      } else if (tblKey === "Staff_Database") {
+        document.getElementById('stf-id').value = rowData[0];
+        document.getElementById('stf-name').value = rowData[1];
+        document.getElementById('stf-dept').value = rowData[2];
+        document.getElementById('stf-mob').value = rowData[3];
+        document.getElementById('btn-stf').innerText = "Update Faculty Entry";
+      } else if (tblKey === "Subject_Database") {
+        document.getElementById('sub-code').value = rowData[0];
+        document.getElementById('sub-name').value = rowData[1];
+        document.getElementById('sub-type').value = rowData[2];
+        document.getElementById('sub-hours').value = rowData[3];
+        document.getElementById('sub-sem').value = rowData[4];
+        document.getElementById('btn-sub').innerText = "Update Subject";
+      } else if (tblKey === "Subject_Allocation") {
+        document.getElementById('alloc-staff-select').value = rowData[0];
+        document.getElementById('alloc-subject-select').value = rowData[2];
+        document.getElementById('btn-alloc').innerText = "Update Mapping";
+      } else if (tblKey === "Student_Database") {
+        document.getElementById('std-id').value = rowData[0];
+        document.getElementById('std-name').value = rowData[1];
+        document.getElementById('std-status').value = rowData[2];
+        document.getElementById('std-dob').value = rowData[3];
+        document.getElementById('std-age').value = rowData[4];
+        document.getElementById('std-p1').value = rowData[5];
+        document.getElementById('std-p2').value = rowData[6];
+        document.getElementById('std-qual').value = rowData[7];
+        document.getElementById('std-10th').value = rowData[8];
+        document.getElementById('std-12th').value = rowData[9];
+        document.getElementById('std-accom').value = rowData[10];
+        toggleHostelFields();
+        document.getElementById('std-hname').value = rowData[11];
+        document.getElementById('std-rno').value = rowData[12];
+        document.getElementById('std-addr').value = rowData[13];
+        tempBase64Image = rowData[14];
+        document.getElementById('std-batch').value = rowData[15];
+        document.getElementById('btn-std').innerText = "Update Matrix Entry";
+      }
+    }
+
+    function sheetTabForKey(tblKey, targetRowData) {
+      if(tblKey === "User_Credentials") return "User_Credentials";
+      if(tblKey === "Staff_Database") return "Staff_Registry";
+      if(tblKey === "Subject_Database") return "Subject_Catalog";
+      if(tblKey === "Subject_Allocation") return "Subject_Allocation_Matrix";
+      if(tblKey === "Student_Database") return `Students_${targetRowData[15].replace(/ /g, "_")}`;
+      return null;
+    }
+
+    function universalDelete(tblKey, rowIdx) {
       if(!confirm("Are you sure?")) return;
       let matrix = JSON.parse(localStorage.getItem(tblKey));
       let targetRowData = matrix[rowIdx];
       let recordId = targetRowData[targetRowData.length - 1];
 
-      // FIX: previously deletion matched by the VALUE of columns 0/1/3/4 on the backend, which
-      // for tables like Daily_Class_Attendance (column 0 = Date, shared by every student's row
-      // that day) could delete every other student's attendance for that date too. Matching by
-      // the unique Record ID removes that risk entirely.
       let sheetTab = sheetTabForKey(tblKey, targetRowData);
       if (sheetTab) syncWithGoogleSheet(sheetTab, [], [], "DELETE", recordId);
 
@@ -1751,18 +1047,523 @@
       renderAllTables();
     }
 
+    function autoCalculateAge() {
+      const dob = document.getElementById('std-dob').value;
+      if (!dob) return;
+      const birthday = new Date(dob);
+      const ageDifMs = Date.now() - birthday.getTime();
+      const ageDate = new Date(ageDifMs);
+      document.getElementById('std-age').value = Math.abs(ageDate.getUTCFullYear() - 1970);
+    }
+
+    function toggleHostelFields() {
+      const type = document.getElementById('std-accom').value;
+      const isHostel = type === "Hostel";
+      document.getElementById('std-hname').disabled = !isHostel;
+      document.getElementById('std-rno').disabled = !isHostel;
+      if(!isHostel) {
+        document.getElementById('std-hname').value = "N/A";
+        document.getElementById('std-rno').value = "N/A";
+      }
+    }
+
+    function processImageUpload(inputEl) {
+      const file = inputEl.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) { tempBase64Image = e.target.result; };
+      reader.readAsDataURL(file);
+    }
+
+    function saveUserData() {
+      const type = document.getElementById('usr-type').value;
+      const uid = document.getElementById('usr-id').value.trim();
+      const pass = document.getElementById('usr-pass').value.trim();
+      if(!uid || !pass) return alert("Fill all fields");
+
+      let matrix = JSON.parse(localStorage.getItem("User_Credentials")) || [];
+      let idx = editingRowIndices["User_Credentials"];
+
+      if(idx > -1) {
+        let recId = matrix[idx][3];
+        matrix[idx] = [type, uid, pass, recId];
+        syncWithGoogleSheet("User_Credentials", userHeaders, matrix[idx], "UPDATE", recId);
+        editingRowIndices["User_Credentials"] = -1;
+        document.getElementById('btn-usr').innerText = "Create Account";
+      } else {
+        let newRow = [type, uid, pass, genId()];
+        matrix.push(newRow);
+        syncWithGoogleSheet("User_Credentials", userHeaders, newRow, "SAVE");
+      }
+      localStorage.setItem("User_Credentials", JSON.stringify(matrix));
+      renderGenericTable("User_Credentials", userHeaders);
+      document.getElementById('usr-id').value = ""; document.getElementById('usr-pass').value = "";
+    }
+
+    function saveStudentData() {
+      const id = document.getElementById('std-id').value.trim();
+      const name = document.getElementById('std-name').value.trim();
+      const status = document.getElementById('std-status').value;
+      const dob = document.getElementById('std-dob').value;
+      const age = document.getElementById('std-age').value;
+      const p1 = document.getElementById('std-p1').value.trim();
+      const p2 = document.getElementById('std-p2').value.trim();
+      const qual = document.getElementById('std-qual').value.trim();
+      const m10 = document.getElementById('std-10th').value.trim();
+      const m12 = document.getElementById('std-12th').value.trim();
+      const accom = document.getElementById('std-accom').value;
+      const hname = document.getElementById('std-hname').value.trim();
+      const rno = document.getElementById('std-rno').value.trim();
+      const addr = document.getElementById('std-addr').value.trim();
+      const batch = document.getElementById('std-batch').value;
+
+      if(!id || !name || !batch) return alert("Fill structural validation inputs (ID, Name, Batch)");
+
+      let matrix = JSON.parse(localStorage.getItem("Student_Database")) || [];
+      let idx = editingRowIndices["Student_Database"];
+      let tabName = `Students_${batch.replace(/ /g, "_")}`;
+
+      if(idx > -1) {
+        let recId = matrix[idx][16];
+        matrix[idx] = [id, name, status, dob, age, p1, p2, qual, m10, m12, accom, hname, rno, addr, tempBase64Image, batch, recId];
+        syncWithGoogleSheet(tabName, studentHeaders, matrix[idx], "UPDATE", recId);
+        editingRowIndices["Student_Database"] = -1;
+        document.getElementById('btn-std').innerText = "Save Entry";
+      } else {
+        let newRow = [id, name, status, dob, age, p1, p2, qual, m10, m12, accom, hname, rno, addr, tempBase64Image, batch, genId()];
+        matrix.push(newRow);
+        syncWithGoogleSheet(tabName, studentHeaders, newRow, "SAVE");
+      }
+      localStorage.setItem("Student_Database", JSON.stringify(matrix));
+      renderGenericTable("Student_Database", studentHeaders);
+      
+      // Clear forms
+      document.querySelectorAll('#tab-view-student_mgmt input, #tab-view-student_mgmt textarea').forEach(i => i.value = "");
+      tempBase64Image = "";
+    }
+
+    function saveStaffData() {
+      const id = document.getElementById('stf-id').value.trim();
+      const name = document.getElementById('stf-name').value.trim();
+      const dept = document.getElementById('stf-dept').value.trim();
+      const mob = document.getElementById('stf-mob').value.trim();
+      if(!id || !name) return alert("Provide base parameters");
+
+      let matrix = JSON.parse(localStorage.getItem("Staff_Database")) || [];
+      let idx = editingRowIndices["Staff_Database"];
+
+      if(idx > -1) {
+        let recId = matrix[idx][4];
+        matrix[idx] = [id, name, dept, mob, recId];
+        syncWithGoogleSheet("Staff_Registry", staffHeaders, matrix[idx], "UPDATE", recId);
+        editingRowIndices["Staff_Database"] = -1;
+        document.getElementById('btn-stf').innerText = "Save Entry";
+      } else {
+        let newRow = [id, name, dept, mob, genId()];
+        matrix.push(newRow);
+        syncWithGoogleSheet("Staff_Registry", staffHeaders, newRow, "SAVE");
+      }
+      localStorage.setItem("Staff_Database", JSON.stringify(matrix));
+      renderGenericTable("Staff_Database", staffHeaders);
+      document.getElementById('stf-id').value = ""; document.getElementById('stf-name').value = "";
+    }
+
+    function saveSubjectData() {
+      const code = document.getElementById('sub-code').value.trim();
+      const name = document.getElementById('sub-name').value.trim();
+      const type = document.getElementById('sub-type').value;
+      const hours = document.getElementById('sub-hours').value;
+      const sem = document.getElementById('sub-sem').value;
+      if(!code || !name) return alert("Provide core details");
+
+      let matrix = JSON.parse(localStorage.getItem("Subject_Database")) || [];
+      let idx = editingRowIndices["Subject_Database"];
+
+      if(idx > -1) {
+        let recId = matrix[idx][5];
+        matrix[idx] = [code, name, type, hours, sem, recId];
+        syncWithGoogleSheet("Subject_Catalog", subjectHeaders, matrix[idx], "UPDATE", recId);
+        editingRowIndices["Subject_Database"] = -1;
+        document.getElementById('btn-sub').innerText = "Save Subject";
+      } else {
+        let newRow = [code, name, type, hours, sem, genId()];
+        matrix.push(newRow);
+        syncWithGoogleSheet("Subject_Catalog", subjectHeaders, newRow, "SAVE");
+      }
+      localStorage.setItem("Subject_Database", JSON.stringify(matrix));
+      renderGenericTable("Subject_Database", subjectHeaders);
+      document.getElementById('sub-code').value = ""; document.getElementById('sub-name').value = "";
+    }
+
+    function populateSlotSelectors() {
+      const staffSelect = document.getElementById('alloc-staff-select');
+      const subjectSelect = document.getElementById('alloc-subject-select');
+      const ttSlot = document.getElementById('tt-slot');
+      const ttSubject = document.getElementById('tt-subject-select');
+
+      if(!staffSelect) return;
+
+      let staff = JSON.parse(localStorage.getItem("Staff_Database")) || [];
+      let subjects = JSON.parse(localStorage.getItem("Subject_Database")) || [];
+
+      staffSelect.innerHTML = staff.map(r => `<option value="${r[0]}">${r[1]} (${r[0]})</option>`).join('');
+      subjectSelect.innerHTML = subjects.map(r => `<option value="${r[0]}">${r[1]} [${r[0]}]</option>`).join('');
+      ttSubject.innerHTML = `<option value="">Select Catalog Code</option>` + subjects.map(r => `<option value="${r[0]}">${r[0]} - ${r[1]}</option>`).join('');
+      ttSlot.innerHTML = timeSlots.filter(s => s.type === 'period').map(s => `<option value="${s.id}">${s.label} (${s.time})</option>`).join('');
+    }
+
+    function saveAllocationData() {
+      const staffId = document.getElementById('alloc-staff-select').value;
+      const subCode = document.getElementById('alloc-subject-select').value;
+
+      let staff = JSON.parse(localStorage.getItem("Staff_Database")) || [];
+      let subjects = JSON.parse(localStorage.getItem("Subject_Database")) || [];
+
+      let staffName = staff.find(r => r[0] === staffId)?.[1] || "";
+      let subName = subjects.find(r => r[0] === subCode)?.[1] || "";
+
+      let matrix = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
+      let idx = editingRowIndices["Subject_Allocation"];
+
+      if(idx > -1) {
+        let recId = matrix[idx][4];
+        matrix[idx] = [staffId, staffName, subCode, subName, recId];
+        syncWithGoogleSheet("Subject_Allocation_Matrix", allocationHeaders, matrix[idx], "UPDATE", recId);
+        editingRowIndices["Subject_Allocation"] = -1;
+        document.getElementById('btn-alloc').innerText = "Map Faculty";
+      } else {
+        let newRow = [staffId, staffName, subCode, subName, genId()];
+        matrix.push(newRow);
+        syncWithGoogleSheet("Subject_Allocation_Matrix", allocationHeaders, newRow, "SAVE");
+      }
+      localStorage.setItem("Subject_Allocation", JSON.stringify(matrix));
+      renderGenericTable("Subject_Allocation", allocationHeaders);
+    }
+
+    function autoFillTimetableStaff() {
+      const subCode = document.getElementById('tt-subject-select').value;
+      let alloc = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
+      let match = alloc.find(r => r[2] === subCode);
+      document.getElementById('tt-staff-name').value = match ? match[1] : "Not Allocated";
+    }
+
+    function saveTimetableData() {
+      const day = document.getElementById('tt-day').value;
+      const slot = document.getElementById('tt-slot').value;
+      const sub = document.getElementById('tt-subject-select').value;
+      const staff = document.getElementById('tt-staff-name').value;
+
+      if(!sub || staff === "Not Allocated") return alert("Allocate a valid mapped subject");
+
+      let matrix = JSON.parse(localStorage.getItem("Timetable_Database")) || [];
+      let matchIdx = matrix.findIndex(r => r[0] === day && r[1] === slot);
+
+      if(matchIdx > -1) {
+        let recId = matrix[matchIdx][4];
+        matrix[matchIdx] = [day, slot, sub, staff, recId];
+        syncWithGoogleSheet("Timetable_Matrix", timetableHeaders, matrix[matchIdx], "UPDATE", recId);
+      } else {
+        let newRow = [day, slot, sub, staff, genId()];
+        matrix.push(newRow);
+        syncWithGoogleSheet("Timetable_Matrix", timetableHeaders, newRow, "SAVE");
+      }
+      localStorage.setItem("Timetable_Database", JSON.stringify(matrix));
+      renderTimetableGridPane();
+    }
+
+    function renderTimetableGridPane() {
+      const pane = document.getElementById('timetable-matrix-view-pane');
+      if(!pane) return;
+
+      let matrix = JSON.parse(localStorage.getItem("Timetable_Database")) || [];
+      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+      let html = `<div class="tt-grid"><div class="tt-header">Day / Slots</div>`;
+      timeSlots.forEach(s => { html += `<div class="tt-header">${s.label}<br><small>${s.time}</small></div>`; });
+
+      days.forEach(d => {
+        html += `<div class="tt-cell tt-day">${d}</div>`;
+        timeSlots.forEach(s => {
+          if(s.type === 'break') {
+            html += `<div class="tt-cell tt-break">${s.label}</div>`;
+          } else {
+            let cellData = matrix.find(r => r[0] === d && r[1] === s.id);
+            if(cellData) {
+              html += `<div class="tt-cell"><span class="tt-subject-title">${cellData[2]}</span><span class="tt-staff-lbl">${cellData[3]}</span></div>`;
+            } else {
+              html += `<div class="tt-cell" style="color:var(--slate-300);">--</div>`;
+            }
+          }
+        });
+      });
+      html += `</div>`;
+      pane.innerHTML = html;
+    }
+
+    function populateStaffInputs() {
+      const subSel = document.getElementById('att-subject');
+      const marksSel = document.getElementById('marks-subject-select');
+      if(!subSel) return;
+
+      let alloc = JSON.parse(localStorage.getItem("Subject_Allocation")) || [];
+      let myAllocations = alloc.filter(r => r[0] === activeUserSession.uid);
+
+      let options = `<option value="">Select Mapped Code</option>` + myAllocations.map(r => `<option value="${r[2]}">${r[3]} (${r[2]})</option>`).join('');
+      subSel.innerHTML = options;
+      if(marksSel) marksSel.innerHTML = options;
+
+      // Force instant matrix builder for the 26 students dynamic loading
+      loadClassAttendanceGrid();
+    }
+
+    function loadClassAttendanceGrid() {
+      const pane = document.getElementById('class-attendance-grid-pane');
+      if(!pane) return;
+
+      let students = JSON.parse(localStorage.getItem("Student_Database")) || [];
+      
+      // Strict layout filter ensures ALL active array students are present (e.g. 26/26 full headcount load)
+      let activeStudents = students.filter(s => s[2] === "Active");
+
+      if(activeStudents.length === 0) {
+        pane.innerHTML = `<p style="color:var(--slate-500);">No active student databases inside framework.</p>`;
+        return;
+      }
+
+      let html = `<table class="att-list-table"><thead><tr><th>Student ID</th><th>Student Name</th><th>Status Toggles</th></tr></thead><tbody>`;
+      activeStudents.forEach((st, idx) => {
+        html += `<tr>
+          <td><strong>${st[0]}</strong></td>
+          <td>${st[1]}</td>
+          <td>
+            <button class="att-status-btn present-state" id="att-btn-${idx}" onclick="toggleAttendanceState(${idx})">Present</button>
+            <input type="hidden" id="att-val-${idx}" value="Present" data-sid="${st[0]}" data-sname="${st[1]}" data-batch="${st[15]}">
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table><div style="margin-top:20px;"><button class="action-btn" id="submit-attendance-btn" onclick="submitClassAttendanceGrid()">Submit Roster Log</button></div>`;
+      pane.innerHTML = html;
+    }
+
+    function toggleAttendanceState(idx) {
+      const btn = document.getElementById(`att-btn-${idx}`);
+      const val = document.getElementById(`att-val-${idx}`);
+      if(val.value === "Present") {
+        val.value = "Absent";
+        btn.innerText = "Absent";
+        btn.className = "att-status-btn absent-state";
+      } else {
+        val.value = "Present";
+        btn.innerText = "Present";
+        btn.className = "att-status-btn present-state";
+      }
+    }
+
+    function submitClassAttendanceGrid() {
+      const date = document.getElementById('att-date').value;
+      const sub = document.getElementById('att-subject').value;
+      const sem = document.getElementById('att-sem').value;
+      const period = document.getElementById('att-period').value;
+
+      if(!date || !sub || !period) return alert("Select standard parameter inputs (Date, Mapped Subject, and Hour Period)");
+
+      let localAttendance = JSON.parse(localStorage.getItem("Daily_Class_Attendance")) || [];
+      let targetTabName = `Class_Att_${sub}_${sem}`;
+      
+      let elements = document.querySelectorAll('[id^="att-val-"]');
+      elements.forEach(el => {
+        let sid = el.getAttribute('data-sid');
+        let sname = el.getAttribute('data-sname');
+        let status = el.value;
+        
+        let newRecord = [date, sub, period, sem, sid, sname, status, activeUserSession.name, genId()];
+        localAttendance.push(newRecord);
+
+        // Dispatches matrix mapping row directly down to standard core structure layout
+        syncWithGoogleSheet(targetTabName, dailyAttendanceHeaders, newRecord, "SAVE");
+      });
+
+      localStorage.setItem("Daily_Class_Attendance", JSON.stringify(localAttendance));
+      alert("Attendance roster log pushed to database engine successfully!");
+      checkExistingAttendance(); // Re-trigger immediate block check
+    }
+
+    function loadMarksLedgerGrid() {
+      const sub = document.getElementById('marks-subject-select').value;
+      const pane = document.getElementById('marks-ledger-grid-pane');
+      if(!sub || !pane) return;
+
+      let students = JSON.parse(localStorage.getItem("Student_Database")) || [];
+      let activeStudents = students.filter(s => s[2] === "Active");
+      let marksLedger = JSON.parse(localStorage.getItem("Legacy_Marks_Ledger")) || [];
+
+      let html = `<table><thead><tr><th>Student ID</th><th>Name</th><th>CIA 1 (50)</th><th>CIA 2 (50)</th><th>CIA 3 (50)</th><th>Assgn (5)</th><th>Att (5)</th><th>Sem (100)</th></tr></thead><tbody>`;
+      
+      activeStudents.forEach((st, idx) => {
+        let match = marksLedger.find(r => r[0] === sub && r[1] === st[0]) || [];
+        html += `<tr>
+          <td>${st[0]}</td>
+          <td>${st[1]}</td>
+          <td><input type="number" id="m-cia1-${idx}" value="${match[3]||0}" style="width:70px;"></td>
+          <td><input type="number" id="m-cia2-${idx}" value="${match[4]||0}" style="width:70px;"></td>
+          <td><input type="number" id="m-cia3-${idx}" value="${match[5]||0}" style="width:70px;"></td>
+          <td><input type="number" id="m-ass-${idx}" value="${match[6]||0}" style="width:70px;"></td>
+          <td><input type="number" id="m-att-${idx}" value="${match[7]||0}" style="width:70px;"></td>
+          <td><input type="number" id="m-sem-${idx}" value="${match[8]||0}" style="width:70px;" data-sid="${st[0]}" data-sname="${st[1]}"></td>
+        </tr>`;
+      });
+
+      html += `</tbody></table><div style="margin-top:20px;"><button class="action-btn" onclick="submitMarksLedgerGrid()">Save Marks Ledger</button></div>`;
+      pane.innerHTML = html;
+    }
+
+    function submitMarksLedgerGrid() {
+      const sub = document.getElementById('marks-subject-select').value;
+      let elements = document.querySelectorAll('[id^="m-sem-"]');
+      let marksLedger = JSON.parse(localStorage.getItem("Legacy_Marks_Ledger")) || [];
+
+      elements.forEach((el, idx) => {
+        let sid = el.getAttribute('data-sid');
+        let sname = el.getAttribute('data-sname');
+        let c1 = parseFloat(document.getElementById(`m-cia1-${idx}`).value) || 0;
+        let c2 = parseFloat(document.getElementById(`m-cia2-${idx}`).value) || 0;
+        let c3 = parseFloat(document.getElementById(`m-cia3-${idx}`).value) || 0;
+        let ass = parseFloat(document.getElementById(`m-ass-${idx}`).value) || 0;
+        let att = parseFloat(document.getElementById(`m-att-${idx}`).value) || 0;
+        let sem = parseFloat(el.value) || 0;
+
+        let total = ((c1+c2+c3)/3) + ass + att + (sem/2);
+        
+        let matchIdx = marksLedger.findIndex(r => r[0] === sub && r[1] === sid);
+        if(matchIdx > -1) {
+          let recId = marksLedger[matchIdx][11];
+          marksLedger[matchIdx] = [sub, sid, sname, c1, c2, c3, ass, att, sem, total.toFixed(2), activeUserSession.name, recId];
+          syncWithGoogleSheet("Legacy_Marks_Ledger", legacyMarksHeaders, marksLedger[matchIdx], "UPDATE", recId);
+        } else {
+          let newRow = [sub, sid, sname, c1, c2, c3, ass, att, sem, total.toFixed(2), activeUserSession.name, genId()];
+          marksLedger.push(newRow);
+          syncWithGoogleSheet("Legacy_Marks_Ledger", legacyMarksHeaders, newRow, "SAVE");
+        }
+      });
+
+      localStorage.setItem("Legacy_Marks_Ledger", JSON.stringify(marksLedger));
+      alert("Marks Ledger synchronized with Google Spreadsheet master dataset.");
+    }
+
+    function loadEventAttendanceGrid() {
+      const batch = document.getElementById('evt-batch').value;
+      const pane = document.getElementById('event-attendance-grid-pane');
+      if(!batch || !pane) return;
+
+      let students = JSON.parse(localStorage.getItem("Student_Database")) || [];
+      let filtered = students.filter(s => s[15] === batch && s[2] === "Active");
+
+      let html = `<table><thead><tr><th>Student ID</th><th>Student Name</th><th>Status</th></tr></thead><tbody>`;
+      filtered.forEach((st, idx) => {
+        html += `<tr>
+          <td>${st[0]}</td>
+          <td>${st[1]}</td>
+          <td>
+            <select id="evt-status-${idx}" data-sid="${st[0]}" data-sname="${st[1]}">
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+            </select>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table><div style="margin-top:20px;"><button class="action-btn" onclick="submitEventAttendanceGrid()">Submit Event Sheet</button></div>`;
+      pane.innerHTML = html;
+    }
+
+    function submitEventAttendanceGrid() {
+      const date = document.getElementById('evt-date').value;
+      const type = document.getElementById('evt-type').value;
+      const desc = document.getElementById('evt-desc').value.trim();
+      const batch = document.getElementById('evt-batch').value;
+
+      if(!date || !desc) return alert("Fill core parameters");
+
+      let localEvent = JSON.parse(localStorage.getItem("Event_Internship_Attendance")) || [];
+      let targetTabName = `Event_Att_${batch.replace(/ /g, "_")}`;
+      let elements = document.querySelectorAll('[id^="evt-status-"]');
+
+      elements.forEach(el => {
+        let sid = el.getAttribute('data-sid');
+        let sname = el.getAttribute('data-sname');
+        let status = el.value;
+
+        let newRow = [date, type, desc, batch, sid, sname, status, genId()];
+        localEvent.push(newRow);
+        syncWithGoogleSheet(targetTabName, eventAttendanceHeaders, newRow, "SAVE");
+      });
+
+      localStorage.setItem("Event_Internship_Attendance", JSON.stringify(localEvent));
+      alert("Special Event Attendance data synchronized successfully.");
+    }
+
+    function renderStudentSelfDashboard() {
+      const root = document.getElementById('student-profile-root-view');
+      const pane = document.getElementById('student-attendance-analytics-pane');
+      if(!root) return;
+
+      let students = JSON.parse(localStorage.getItem("Student_Database")) || [];
+      let myProfile = students.find(r => r[0] === activeUserSession.uid);
+
+      if(!myProfile) {
+        root.innerHTML = `<p>Profile record error inside system memory stack.</p>`;
+        return;
+      }
+
+      let photoHtml = myProfile[14] ? `<img src="${myProfile[14]}" alt="Photo">` : `<i class="fa-solid fa-user"></i>`;
+
+      root.innerHTML = `
+        <div class="student-header-block">
+          <div class="student-photo-frame">${photoHtml}</div>
+          <div class="student-meta-summary">
+            <h3>${myProfile[1]}</h3>
+            <p style="color:var(--slate-500);font-weight:600;margin-top:4px;">Roll Number: ${myProfile[0]} | Batch: ${myProfile[15]}</p>
+          </div>
+        </div>
+        <div class="profile-card">
+          <div class="info-tile"><span>Status</span><p>${myProfile[2]}</p></div>
+          <div class="info-tile"><span>DOB</span><p>${myProfile[3]}</p></div>
+          <div class="info-tile"><span>Age</span><p>${myProfile[4]}</p></div>
+          <div class="info-tile"><span>Primary Contact</span><p>${myProfile[5]}</p></div>
+          <div class="info-tile"><span>Accommodation</span><p>${myProfile[10]}</p></div>
+          <div class="info-tile"><span>Hostel Assignment</span><p>${myProfile[11]} [Room ${myProfile[12]}]</p></div>
+          <div class="info-tile" style="grid-column: span 2;"><span>Permanent Address</span><p>${myProfile[13]}</p></div>
+        </div>
+      `;
+
+      // Analytical calculator setup logic engine
+      let attendanceRows = JSON.parse(localStorage.getItem("Daily_Class_Attendance")) || [];
+      let myAtt = attendanceRows.filter(r => r[4] === activeUserSession.uid);
+      
+      let total = myAtt.length;
+      let present = myAtt.filter(r => r[6] === "Present").length;
+      let pct = total > 0 ? ((present/total)*100).toFixed(1) : "100.0";
+
+      pane.innerHTML = `
+        <div class="profile-card" style="margin-bottom:30px;">
+          <div class="info-tile" style="border-left:5px solid var(--sky-500);"><span>Total Tracked Hours</span><p>${total} Hours</p></div>
+          <div class="info-tile" style="border-left:5px solid #16a34a;"><span>Attended Hours</span><p>${present} Hours</p></div>
+          <div class="info-tile" style="border-left:5px solid #eab308;"><span>Attendance Percentage</span><p>${pct}%</p></div>
+        </div>
+        <h3>Detailed Academic Log</h3>
+        <table><thead><tr><th>Date</th><th>Subject Code</th><th>Period / Hour</th><th>Roster Status</th></tr></thead><tbody>
+          ${myAtt.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2] || "N/A"}</td><td><strong>${r[6]}</strong></td></tr>`).join('')}
+        </tbody></table>
+      `;
+    }
+
     function handleLogout() {
       activeUserSession = { role: "", uid: "", name: "" };
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('global-header').style.display = 'none';
       document.getElementById('main-sidebar').style.display = 'none';
       document.getElementById('main-content-area').style.display = 'none';
+      document.getElementById('username').value = ""; document.getElementById('password').value = "";
     }
-
-    window.onload = function() {
-      fetchDataFromGoogleSheets();
-      setInterval(fetchDataFromGoogleSheets, 15000);
-    };
   </script>
 </body>
 </html>
