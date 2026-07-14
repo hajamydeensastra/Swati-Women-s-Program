@@ -1,5 +1,5 @@
 /* ==========================================================================
-   INSTITUTIONAL CORE SYSTEM ENGINE (MODULAR RUNTIME) - OPTIMIZED
+   INSTITUTIONAL CORE SYSTEM ENGINE (MODULAR RUNTIME) - OPTIMIZED WITH STAFF CONFLICT RESOLUTIONS
    ========================================================================== */
 
 // 1. DYNAMIC DEPLOYMENT CONFIGURATIONS
@@ -615,7 +615,7 @@ function createHeaderCell(text) {
   return cell;
 }
 
-// 11. STAFF WORKSPACE DASHBOARD RENDERER (OPTIMIZED FOR AUTOMATIC TIMETABLE extraction)
+// 11. STAFF WORKSPACE DASHBOARD RENDERER (OPTIMIZED WITH COMPLETED TRACKING)
 function renderStaffDashboardConsole() {
   const staffName = activeUserSession.name;
   const staffIdField = document.getElementById("stf-dash-id");
@@ -629,6 +629,10 @@ function renderStaffDashboardConsole() {
   const allocationsList = JSON.parse(localStorage.getItem("MASTER_ALLOCATIONS")) || [];
   const subjectList = JSON.parse(localStorage.getItem("MASTER_SUBJECTS")) || [];
   const timetableList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
+  
+  // Custom tracking logic base date 
+  const activeDate = document.getElementById("att-date-picker")?.value || new Date().toISOString().split('T')[0];
 
   const profile = staffList.find(s => s[1] === staffName);
   
@@ -636,7 +640,6 @@ function renderStaffDashboardConsole() {
   staffNameField.innerText = staffName;
   staffDeptField.innerText = profile ? profile[2] : "Faculty Department Stream";
 
-  // Check allocations mapped to the logged-in staff
   const activeAllocations = allocationsList.filter(row => row[0] === staffName);
   
   if (activeAllocations.length === 0) {
@@ -649,32 +652,44 @@ function renderStaffDashboardConsole() {
   activeAllocations.forEach(alloc => {
     let subObj = subjectList.find(s => s[0] === alloc[2]);
     let subName = subObj ? subObj[1] : "Seminar / Lab Session";
-    let targetClass = alloc[1]; // e.g., CSE-A-Y3
-    let targetSubjectCode = alloc[2]; // e.g., CS601-ALGO
+    let targetClass = alloc[1]; 
+    let targetSubjectCode = alloc[2]; 
 
     let matchingPeriods = [];
 
-    // Filter and pull scheduled periods/hours directly from the CLASS_TIMETABLES database
     timetableList.forEach(tt => {
-      // tt[0] is ClassID, tt[1] is Day Name, tt[2] to tt[8] are Hour_1 to Hour_7
       if (tt[0] === targetClass) {
         for (let hr = 1; hr <= 7; hr++) {
-          let fieldVal = tt[hr + 1] || ""; // cell data format: "SubjectCode|StaffName + CoStaff"
+          let fieldVal = tt[hr + 1] || ""; 
           
           if (fieldVal.includes("|")) {
             let [subToken, staffToken] = fieldVal.split("|");
-            // Check if this specific subject and staff match the logged-in user
             if (subToken.trim() === targetSubjectCode && staffToken.includes(staffName)) {
-              matchingPeriods.push(`${tt[1]} (Period ${hr})`);
+              
+              // Attendance completed or conflict checks inside matching database logs
+              let checkKey = `${targetSubjectCode}_P${hr}`;
+              let attendanceRecord = attendanceLogs.find(log => 
+                log[0] === activeDate && 
+                log[1] === checkKey && 
+                log[2] === targetClass
+              );
+
+              let statusLabel = "";
+              if (attendanceRecord) {
+                statusLabel = ` <span style="font-size:10px; font-weight:700; color:#059669; background:#d1fae5; padding:2px 6px; border-radius:4px; margin-left:4px;">COMPLETED (By ${attendanceRecord[5]})</span>`;
+              } else {
+                statusLabel = ` <span style="font-size:10px; font-weight:700; color:#dc2626; background:#fee2e2; padding:2px 6px; border-radius:4px; margin-left:4px;">PENDING</span>`;
+              }
+
+              matchingPeriods.push(`${tt[1]} (Hour ${hr})${statusLabel}`);
             }
           }
         }
       }
     });
 
-    // Formatting output labels
     let periodsLabel = matchingPeriods.length > 0 
-      ? matchingPeriods.join(", ") 
+      ? matchingPeriods.join("<br/>") 
       : "<span style='color:var(--slate-400); font-style:italic;'>Not Scheduled in Timetable yet</span>";
 
     let tr = `
@@ -682,7 +697,7 @@ function renderStaffDashboardConsole() {
         <td><strong>${targetSubjectCode}</strong></td>
         <td>${subName}</td>
         <td>${targetClass}</td>
-        <td><span class="mode-badge" style="background:var(--slate-100); color:var(--slate-700); font-weight:600; padding:6px 12px; display:inline-block; border-radius:8px;">${periodsLabel}</span></td>
+        <td><div style="line-height:1.8;">${periodsLabel}</div></td>
       </tr>`;
     allocationTbody.insertAdjacentHTML("beforeend", tr);
   });
@@ -733,7 +748,7 @@ function filterSubjectsByAssignedStaff() {
   `;
 
   assignedSubjects.forEach(sub => {
-    // Check if other co-instructor has already registered attendance for this class + subject + date combination
+    // Exact subject overall update checking logs
     const isAlreadyMarkedByCoStaff = attendanceLogs.some(log => 
       log[0] === activeDate && 
       log[1].startsWith(sub[0]) && 
@@ -750,34 +765,22 @@ function filterSubjectsByAssignedStaff() {
 
     let statusBadge = `<span class="mode-badge" style="background:#fee2e2; color:#b91c1c;">Pending</span>`;
     
-    // Threshold date override logic (For dates strictly before 20.07.2026)
     const parsedTargetDate = new Date(activeDate);
-    const limitDate = new Date("2026-07-20");
+    const limitDate = new Date("2026-07-09");
     if (parsedTargetDate < limitDate) {
-      statusBadge = `<span class="mode-badge" style="background:var(--slate-200); color:var(--slate-600);">No Action (Before July 20)</span>`;
+      statusBadge = `<span class="mode-badge" style="background:var(--slate-200); color:var(--slate-600);">No Action (Before July 09)</span>`;
     } else if (isMarkedByMe) {
       statusBadge = `<span class="mode-badge" style="background:#d1fae5; color:#065f46;">Completed (By You)</span>`;
     } else if (isAlreadyMarkedByCoStaff) {
       statusBadge = `<span class="mode-badge" style="background:#e0f2fe; color:#0369a1;">Already Updated (Co-Staff)</span>`;
     }
 
-    if (isAlreadyMarkedByCoStaff) {
-      // Locked out if another co-staff member updated it
-      html += `
-        <div style="border: 1px solid var(--slate-200); padding: 15px; border-radius: 12px; flex: 1; min-width: 250px; background: var(--slate-50); opacity: 0.7;">
-          <strong>${sub[0]}</strong><br/>
-          <span style="font-size:12px; color:var(--slate-500);">${sub[1]}</span><br/>
-          ${statusBadge}
-          <p style="font-size:11px; margin-top:6px; color:var(--slate-500);"><i class="fas fa-lock"></i> Synced by co-instructor.</p>
-        </div>`;
-    } else {
-      html += `
-        <button type="button" class="action-btn" onclick="handleSubjectClickForPeriodSelection('${sub[0]}', '${selectedClass}')" style="background:var(--slate-800); text-align: left; height: auto; min-width: 250px; flex: 1; display:flex; flex-direction:column; gap:6px;">
-          <div style="font-weight:700;">${sub[0]}</div>
-          <div style="font-size:12px; font-weight:normal; opacity:0.8;">${sub[1]}</div>
-          ${statusBadge}
-        </button>`;
-    }
+    html += `
+      <button type="button" class="action-btn" onclick="handleSubjectClickForPeriodSelection('${sub[0]}', '${selectedClass}')" style="background:var(--slate-800); text-align: left; height: auto; min-width: 250px; flex: 1; display:flex; flex-direction:column; gap:6px;">
+        <div style="font-weight:700;">${sub[0]}</div>
+        <div style="font-size:12px; font-weight:normal; opacity:0.8;">${sub[1]}</div>
+        ${statusBadge}
+      </button>`;
   });
 
   html += `</div></div><div id="dynamic-period-selection-wrapper"></div><div id="dynamic-student-checklist-wrapper"></div></div>`;
@@ -793,9 +796,11 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
   studentWrapper.innerHTML = ""; 
 
   const timetables = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  const attendanceLogs = JSON.parse(localStorage.getItem("DAILY_ATTENDANCE")) || [];
   const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
   const activeDateVal = document.getElementById("att-date-picker").value || new Date().toISOString().split('T')[0];
   const activeDayName = days[new Date(activeDateVal).getDay()];
+  const staffName = activeUserSession.name;
 
   let availablePeriods = [];
   const dayPlan = timetables.find(row => row[0] === classId && row[1] === activeDayName);
@@ -804,15 +809,16 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
     for (let hr = 1; hr <= 7; hr++) {
       let cellData = dayPlan[hr + 1] || "";
       if (cellData.includes("|")) {
-        let subjectToken = cellData.split("|")[0];
-        if (subjectToken === subCode) {
+        let [subjectToken, staffToken] = cellData.split("|");
+        // Timetable cell matching checking logic
+        if (subjectToken.trim() === subCode && (activeUserSession.role === "ADMIN" || staffToken.includes(staffName))) {
           availablePeriods.push(hr);
         }
       }
     }
   }
 
-  // Fallback setup to let staff select any period if not strictly in dynamic timetable matrix
+  // Timetable fallback logic wrapper setup
   if (availablePeriods.length === 0) {
     availablePeriods = [1, 2, 3, 4, 5, 6, 7];
   }
@@ -820,14 +826,39 @@ function handleSubjectClickForPeriodSelection(subCode, classId) {
   let html = `
     <div class="form-field-group" style="margin-top: 15px;">
       <label style="font-weight: 700; color: var(--slate-800);">Step 2: Choose Mapped Period hour</label>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
   `;
 
   availablePeriods.forEach(p => {
-    html += `
-      <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:var(--sky-600); min-width: 100px;">
-        Period ${p}
-      </button>`;
+    let subColumnKey = `${subCode}_P${p}`;
+    
+    // Check if yaarathu already upload panni irukaangala (Person A or B)
+    let alreadyMarkedLog = attendanceLogs.find(log => 
+      log[0] === activeDateVal && 
+      log[1] === subColumnKey && 
+      log[2] === classId
+    );
+
+    if (alreadyMarkedLog) {
+      let markerName = alreadyMarkedLog[5];
+      let isByMe = markerName === staffName;
+      
+      // Person A update panniruntha button green color/lock logic with distinct status state
+      html += `
+        <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:#059669; min-width: 150px; text-align:center;">
+          Period ${p} <br/>
+          <span style="font-size:10px; font-weight:600; opacity:0.9;">
+            ${isByMe ? 'COMPLETED (You)' : `COMPLETED (${markerName})`}
+          </span>
+        </button>`;
+    } else {
+      // Pending button
+      html += `
+        <button type="button" class="action-btn" onclick="handlePeriodClickForStudentList(${p}, '${classId}')" style="background:var(--sky-600); min-width: 150px; text-align:center;">
+          Period ${p} <br/>
+          <span style="font-size:10px; font-weight:600; opacity:0.8;">PENDING</span>
+        </button>`;
+    }
   });
 
   html += `</div></div>`;
@@ -951,6 +982,8 @@ async function saveFacultyAttendanceRegister() {
   setGlobalSyncState(false);
   alert("Success: Verification sheet successfully updated and synchronized!");
   
+  // Dashboard and dynamic lists components sync update
+  renderStaffDashboardConsole();
   filterSubjectsByAssignedStaff();
 }
 
