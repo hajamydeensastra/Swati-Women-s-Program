@@ -609,5 +609,18 @@ tr:hover {
   border: 1px solid #f87171; 
 }
 
+/* MARKS ENTRY STYLING CODES */
+.marks-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--slate-300);
+  border-radius: 6px;
+  outline: none;
+  font-size: 14px;
+}
+.marks-input:focus {
+  border-color: var(--sky-500);
+}
+
 .tab-content { display: none; }
 .tab-content.active { display: block; }
