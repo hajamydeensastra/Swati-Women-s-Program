@@ -125,20 +125,28 @@ function syncAllFromGoogleSheets() {
 
 function syncWithGoogleSheet(sheetTab, payload, headers, action, recordId = "") {
   if (!DEPLOYMENT_WEB_APP_URL) return;
+  
+  // Apps Script code-oda strict mapping-ku yetha madi variable names-ai mathiyachubro!
   const requestBody = {
-    sheetName: sheetTab,
+    tabName: sheetTab,       // Changed from sheetName to tabName
     action: action,
     payload: payload,
     headers: headers,
-    recordId: recordId
+    rowId: recordId          // Changed from recordId to rowId
   };
 
+  // POST request fetch configuration optimized for Google Redirects
   fetch(DEPLOYMENT_WEB_APP_URL, {
     method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/json" },
+    mode: "cors",            // Changed from no-cors to cors for better handshake
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // Apps Script accepts text/plain best in CORS
     body: JSON.stringify(requestBody)
-  }).catch(err => console.warn("Google sheet background synchronization failed:", err));
+  })
+  .then(res => res.json())
+  .then(resData => {
+     console.log("Cloud Engine Status:", resData);
+  })
+  .catch(err => console.warn("Google sheet background synchronization logging:", err));
 }
 
 function sheetTabForKey(key, optionalRowData = null) {
