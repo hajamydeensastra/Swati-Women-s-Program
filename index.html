@@ -14,7 +14,6 @@
 
   <div class="login-page" id="login-screen">
     <div class="login-logo-wrapper">
-      <!-- Top Global Logo on Login -->
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
     </div>
     <div class="login-container">
@@ -78,6 +77,10 @@
         </li>
         <li class="menu-item admin-only-opt" data-target="staff-management-section">
           <i class="fas fa-chalkboard-teacher"></i> Faculty Register
+        </li>
+        <!-- NEW MENU ITEM FOR SUBJECT ALLOCATION -->
+        <li class="menu-item admin-only-opt" data-target="subject-allocation-section">
+          <i class="fas fa-tasks"></i> Subject Allocation
         </li>
         <li class="menu-item admin-only-opt" data-target="student-management-section">
           <i class="fas fa-user-graduate"></i> Student Profiles
@@ -381,6 +384,54 @@
                 </tr>
               </thead>
               <tbody id="staff-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW TAB CONTENT FOR SUBJECT ALLOCATIONS -->
+      <div id="subject-allocation-section" class="tab-content">
+        <header>
+          <h1>Subject Allocation Desk</h1>
+        </header>
+        <div class="data-section">
+          <h2>Assign Academic Subject & Faculty mapping</h2>
+          <form id="allocation-creation-form" onsubmit="event.preventDefault(); handleFormSubmission('MASTER_ALLOCATIONS', ['alloc-staff-select', 'alloc-class-select', 'alloc-sub-select'], 'allocation-creation-form');">
+            <div class="form-grid-layout">
+              <div class="form-field-group">
+                <label>Choose Faculty Instructor *</label>
+                <select id="alloc-staff-select" required></select>
+              </div>
+              <div class="form-field-group">
+                <label>Mapped Class Room *</label>
+                <select id="alloc-class-select" required></select>
+              </div>
+              <div class="form-field-group">
+                <label>Academic Subject Index *</label>
+                <select id="alloc-sub-select" required></select>
+              </div>
+            </div>
+            <button type="submit" class="action-btn" style="margin-top: 20px;">Commit Assignment Mapping</button>
+          </form>
+        </div>
+
+        <div class="data-section">
+          <h2>Current Academic Allocations Matrix</h2>
+          <div class="search-input-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-allocations" placeholder="Search allocations..." onkeyup="triggerSearchFilter('allocation-table-body')">
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Faculty Member</th>
+                  <th>Class Unit</th>
+                  <th>Subject Code</th>
+                  <th>System Actions</th>
+                </tr>
+              </thead>
+              <tbody id="allocation-table-body"></tbody>
             </table>
           </div>
         </div>
