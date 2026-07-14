@@ -9,15 +9,82 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Elegant Timetable Modal Popup Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-container {
+      background: #ffffff;
+      width: 90%;
+      max-width: 1200px;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalFadeIn 0.3s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-header {
+      padding: 20px 24px;
+      background: var(--slate-900, #0f172a);
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 24px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .modal-close-btn:hover {
+      color: #ffffff;
+    }
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+      background: #f8fafc;
+    }
+  </style>
 </head>
 <body>
 
   <div class="login-page" id="login-screen">
     <div class="login-logo-wrapper">
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-	<img src="Greaves_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-	<img src="Swati_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-	<img src="Pygmalion_Foundation_logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Greaves_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Swati_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Pygmalion_Foundation_logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
     </div>
     <div class="login-container">
       <div class="login-header">
@@ -50,9 +117,9 @@
   <header class="global-logo-header" id="global-header" style="display: none;">
     <div class="logo-container-flex">
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-	<img src="Greaves_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-	<img src="Swati_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-	<img src="Pygmalion_Foundation_logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Greaves_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Swati_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Pygmalion_Foundation_logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
       <span class="mode-badge" id="mode-flag-badge">PORTAL HUB</span>
     </div>
   </header>
@@ -96,15 +163,15 @@
         </li>
 
         <!-- STAFF PORTAL MENU ITEMS -->
-	<li class="menu-item staff-only-opt" data-target="staff-dashboard-section" id="staff-sidebar-dashboard" style="display: none;">
-  		<i class="fas fa-th-large"></i> Dashboard
-	</li>
-	<li class="menu-item staff-only-opt" data-target="staff-attendance-section" id="staff-sidebar-attendance" style="display: none;">
-  		<i class="fas fa-clipboard-check"></i> Attendance Entry
-	</li>
-	<li class="menu-item staff-only-opt" data-target="marks-entry-management-section" id="staff-sidebar-marks" style="display: none;">
-  		<i class="fas fa-marker"></i> Marks Registry
-	</li>
+        <li class="menu-item staff-only-opt" data-target="staff-dashboard-section" id="staff-sidebar-dashboard" style="display: none;">
+          <i class="fas fa-th-large"></i> Dashboard
+        </li>
+        <li class="menu-item staff-only-opt" data-target="staff-attendance-section" id="staff-sidebar-attendance" style="display: none;">
+          <i class="fas fa-clipboard-check"></i> Attendance Entry
+        </li>
+        <li class="menu-item staff-only-opt" data-target="marks-entry-management-section" id="staff-sidebar-marks" style="display: none;">
+          <i class="fas fa-marker"></i> Marks Registry
+        </li>
       </ul>
 
       <div style="margin-top: auto; padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); color: #94a3b8; font-size: 13px;">
@@ -125,24 +192,15 @@
     <main class="main-content" id="main-content-area">
       
       <div id="dashboard-section" class="tab-content active">
-        <header>
+        <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
           <h1>Executive Console Panel</h1>
+          <button class="action-btn" onclick="openTimetableModalPopup()" style="background: #8b5cf6; display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 10px 18px;">
+            <i class="fas fa-calendar-alt"></i> View Timetable
+          </button>
         </header>
 
-        <!-- Dynamic Dynamic Metrics Summary Cards for Dashboard -->
+        <!-- Dynamic Metrics Summary Cards (Modified) -->
         <div class="profile-card" style="margin-bottom: 30px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-          <div class="info-tile" style="border-left: 4px solid var(--sky-500);">
-            <span>Total Users</span>
-            <p id="dash-count-users" style="font-size: 24px; font-weight: 800;">0</p>
-          </div>
-          <div class="info-tile" style="border-left: 4px solid var(--emerald-600);">
-            <span>Total Courses</span>
-            <p id="dash-count-courses" style="font-size: 24px; font-weight: 800;">0</p>
-          </div>
-          <div class="info-tile" style="border-left: 4px solid #f59e0b;">
-            <span>Total Classes</span>
-            <p id="dash-count-classes" style="font-size: 24px; font-weight: 800;">0</p>
-          </div>
           <div class="info-tile" style="border-left: 4px solid #8b5cf6;">
             <span>Total Faculty</span>
             <p id="dash-count-staff" style="font-size: 24px; font-weight: 800;">0</p>
@@ -150,6 +208,14 @@
           <div class="info-tile" style="border-left: 4px solid #ec4899;">
             <span>Total Students</span>
             <p id="dash-count-students" style="font-size: 24px; font-weight: 800;">0</p>
+          </div>
+          <div class="info-tile" style="border-left: 4px solid #06b6d4;">
+            <span>Total Dayscholar</span>
+            <p id="dash-count-dayscholar" style="font-size: 24px; font-weight: 800;">0</p>
+          </div>
+          <div class="info-tile" style="border-left: 4px solid #f59e0b;">
+            <span>Total Hosteler</span>
+            <p id="dash-count-hosteler" style="font-size: 24px; font-weight: 800;">0</p>
           </div>
         </div>
 
@@ -868,6 +934,28 @@
       </div>
 
     </main>
+  </div>
+
+  <!-- Dynamic Timetable Popup Modal Structure -->
+  <div class="modal-overlay" id="timetable-popup-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>Institutional Matrix Timetable Viewer</h3>
+        <button class="modal-close-btn" onclick="closeTimetableModalPopup()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-field-group" style="margin-bottom: 20px; max-width: 300px;">
+          <label style="font-weight:700;">Select Target Sector Class</label>
+          <select id="modal-tt-class-select" onchange="renderModalTimetableGrid()"></select>
+        </div>
+        <div class="tt-grid" id="modal-tt-runtime-grid" style="grid-template-columns: 140px repeat(10, minmax(130px, 1fr));">
+          <p style="grid-column: span 11; text-align: center; color: var(--slate-400); padding: 40px 0;">Please select a class from the dropdown above to display its timetable grid.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="action-btn" onclick="closeTimetableModalPopup()" style="background: var(--slate-700);">Close Window</button>
+      </div>
+    </div>
   </div>
 
   <script src="scripts.js"></script>
