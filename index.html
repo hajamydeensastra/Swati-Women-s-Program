@@ -659,22 +659,9 @@
                 <label>Residential Address *</label>
                 <input type="text" id="std-address" placeholder="Enter Full Address" required>
               </div>
-              <!-- Student Photo File Field Preview Snippet Layout -->
               <div class="form-field-group" style="grid-column: span 2;">
-                <label>Student Photo</label>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                  <!-- Hidden fields to retain state integration -->
-                  <input type="file" id="std-photo-file" accept="image/*" style="display: none;" onchange="handlePhotoUploadPreview(this)">
-                  <input type="hidden" id="std-photo">
-                  
-                  <!-- Upload Trigger Button -->
-                  <button type="button" class="action-btn" onclick="document.getElementById('std-photo-file').click();" style="background: var(--slate-800);">Upload Photo</button>
-                  
-                  <!-- Upload Local Preview Panel Indicator Box -->
-                  <div id="std-photo-preview-container" style="width: 55px; height: 55px; border-radius: 10px; border: 2px dashed var(--slate-300); overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--slate-50);">
-                    <i class="fas fa-image" style="color: var(--slate-400); font-size: 20px;"></i>
-                  </div>
-                </div>
+                <label>Student Photo (Google Drive Direct URL / Image Link)</label>
+                <input type="text" id="std-photo" placeholder="https://drive.google.com/uc?export=view&id=...">
               </div>
             </div>
             <button type="submit" class="action-btn" style="margin-top: 20px;">Commit Student Enrollment</button>
