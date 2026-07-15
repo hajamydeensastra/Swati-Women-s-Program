@@ -116,6 +116,23 @@ function toggleHostelFieldsVisibility() {
   });
 }
 
+// NEW FUNCTION: PHOTO UPLOAD AND BASE64 RUNTIME RENDERING
+function handlePhotoUploadPreview(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64String = e.target.result;
+    document.getElementById("std-photo").value = base64String;
+    const previewBox = document.getElementById("std-photo-preview-container");
+    if (previewBox) {
+      previewBox.innerHTML = `<img src="${base64String}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 // 5. SECURE ENDPOINT SYNCHRONIZATION
 function setGlobalSyncState(status) {
   syncInProgressState = status;
@@ -194,12 +211,10 @@ function renderAdminDashboardSummary() {
   const staff = JSON.parse(localStorage.getItem("MASTER_STAFFS")) || [];
   const students = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
 
-  // Calculate Dayscholar and Hosteler counts based on 'MASTER_STUDENTS' database
   let dayscholarCount = 0;
   let hostelerCount = 0;
   
   students.forEach(student => {
-    // Accommodation configuration is at index 11
     let accommodation = student[11] ? String(student[11]).trim().toLowerCase() : "";
     if (accommodation === "dayscholar") {
       dayscholarCount++;
@@ -342,7 +357,7 @@ function refreshFormDropdownLists() {
   populateSelectControl("tt-class-select", classList, 0, 1);
   populateSelectControl("att-class-select", classList, 0, 1);
   populateSelectControl("marks-class-select", classList, 0, 1);
-  populateSelectControl("modal-tt-class-select", classList, 0, 1); // Modal Timetable Selector
+  populateSelectControl("modal-tt-class-select", classList, 0, 1);
 
   populateSelectControl("alloc-staff-select", staffList, 1, 0); 
   populateSelectControl("alloc-class-select", classList, 0, 1);
@@ -414,7 +429,17 @@ function handleFormSubmission(tblKey, inputControlIds, resetFormElementId = null
 
   if (resetFormElementId) {
     document.getElementById(resetFormElementId).reset();
-    if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
+    if(tblKey === "MASTER_STUDENTS") {
+      toggleHostelFieldsVisibility();
+      // Reset local file entry and base64 preview element instances
+      const previewBox = document.getElementById("std-photo-preview-container");
+      if (previewBox) {
+        previewBox.innerHTML = `<i class="fas fa-image" style="color: var(--slate-400); font-size: 20px;"></i>`;
+      }
+      document.getElementById("std-photo").value = "";
+      const fileInput = document.getElementById("std-photo-file");
+      if (fileInput) fileInput.value = "";
+    }
   }
 }
 
@@ -429,7 +454,19 @@ function handleUniversalEdit(tblKey, rowIdx, inputControlIds) {
     if (inputControl) inputControl.value = targetRow[idx] || "";
   });
 
-  if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
+  if(tblKey === "MASTER_STUDENTS") {
+    toggleHostelFieldsVisibility();
+    // Re-render local preview configuration if image data exists inside the string payload index
+    const photoData = document.getElementById("std-photo").value;
+    const previewBox = document.getElementById("std-photo-preview-container");
+    if (previewBox) {
+      if (photoData) {
+        previewBox.innerHTML = `<img src="${photoData}" style="width: 100%; height: 100%; object-fit: cover;">`;
+      } else {
+        previewBox.innerHTML = `<i class="fas fa-image" style="color: var(--slate-400); font-size: 20px;"></i>`;
+      }
+    }
+  }
   alert("Row parameters successfully bound to UI editors! Edit and commit form.");
 }
 
@@ -443,7 +480,6 @@ function renderAllTables() {
   renderDatasetToTable("allocation-table-body", "MASTER_ALLOCATIONS", [0, 1, 2], ["Faculty", "Class ID", "Subject Code"]);
   renderDatasetToTable("student-table-body", "MASTER_STUDENTS", [0, 1, 2, 3, 4, 5, 6, 11], ["ID", "Name", "Class", "Course", "Status", "DOB", "Age", "Accom"]);
   
-  // Render Dynamic Counters on Admin Dashboard
   renderAdminDashboardSummary();
 }
 
@@ -644,7 +680,7 @@ function openTimetableModalPopup() {
   const modal = document.getElementById("timetable-popup-modal");
   if (modal) {
     modal.style.display = "flex";
-    renderModalTimetableGrid(); // Trigger initial state
+    renderModalTimetableGrid(); 
   }
 }
 
@@ -1231,7 +1267,6 @@ function loadMarksEntrySheet() {
   `;
 
   classStudents.forEach(student => {
-    // Looks up pre-existing entry dynamically to allow future edits
     let existingRecord = marksLogs.find(m => m[0] === student[0] && m[1] === subjectCode);
     
     let cia1 = existingRecord ? existingRecord[2] : "0";
@@ -1307,7 +1342,6 @@ async function saveStudentsMarksRegister() {
     let sem = inputs[5].value || "0";
     let total = row.querySelector(".row-grand-total").innerText;
 
-    // Checks for duplicate entries dynamically before updating sheet memory map
     let matchIdx = marksLogs.findIndex(m => m[0] === studentId && m[1] === subjectCode);
     let payload = [studentId, subjectCode, cia1, cia2, cia3, assign, att, sem, total];
     
