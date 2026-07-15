@@ -574,10 +574,14 @@ function renderTimetableGridDisplay() {
   const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 
+  // Column sizes fully customized for small resolution
+  gridContainer.style.display = "grid";
+  gridContainer.style.gridTemplateColumns = "90px repeat(10, minmax(75px, 1fr))";
+
   const timeLabels = [
-    "08:45-09:45\n(Period 1)", "09:45-10:45\n(Period 2)", "10:45-11:00\n(BREAK)",
-    "11:00-12:00\n(Period 3)", "12:00-01:00\n(Period 4)", "01:00-02:00\n(LUNCH)",
-    "02:00-03:00\n(Period 5)", "03:00-03:15\n(BREAK)", "03:15-04:15\n(Period 6)", "04:15-05:16\n(Period 7)"
+    "08:45-09:45\n(P1)", "09:45-10:45\n(P2)", "10:45-11:00\n(BREAK)",
+    "11:00-12:00\n(P3)", "12:00-01:00\n(P4)", "01:00-02:00\n(LUNCH)",
+    "02:00-03:00\n(P5)", "03:00-03:15\n(BREAK)", "03:15-04:15\n(P6)", "04:15-05:15\n(P7)"
   ];
 
   gridContainer.appendChild(createHeaderCell("DAY / TIMINGS"));
@@ -593,35 +597,21 @@ function renderTimetableGridDisplay() {
     
     let periodTrackingCounter = 1;
     for (let currentSlot = 1; currentSlot <= 10; currentSlot++) {
-      if (currentSlot === 3) {
+      if (currentSlot === 3 || currentSlot === 6 || currentSlot === 8) {
         let breakCell = document.createElement("div");
         breakCell.className = "tt-cell tt-break";
-        breakCell.innerText = "BREAK";
-        gridContainer.appendChild(breakCell);
-        continue;
-      }
-      if (currentSlot === 6) {
-        let lunchBreak = document.createElement("div");
-        lunchBreak.className = "tt-cell tt-break";
-        lunchBreak.innerText = "LUNCH";
-        gridContainer.appendChild(lunchBreak);
-        continue;
-      }
-      if (currentSlot === 8) {
-        let breakCell = document.createElement("div");
-        breakCell.className = "tt-cell tt-break";
-        breakCell.innerText = "BREAK";
+        breakCell.innerText = currentSlot === 6 ? "LUNCH" : "BREAK";
         gridContainer.appendChild(breakCell);
         continue;
       }
 
       let cellValue = mappedDayData ? mappedDayData[periodTrackingCounter + 1] : "";
       let cellNode = document.createElement("div");
-      cellNode.className = "tt-cell";
+      cellNode.className = "tt-cell compact-view-cell";
 
       if (cellValue && cellValue.includes("|")) {
         let [sub, staff] = cellValue.split("|");
-        cellNode.innerHTML = `<div class="tt-subject-title">${sub}</div><div class="tt-staff-lbl">${staff}</div>`;
+        cellNode.innerHTML = `<div class="tt-subject-title" title="${sub}">${sub}</div><div class="tt-staff-lbl" title="${staff}">${staff}</div>`;
       } else {
         cellNode.innerText = "-";
       }
@@ -630,7 +620,6 @@ function renderTimetableGridDisplay() {
     }
   });
 }
-
 function createHeaderCell(text) {
   let cell = document.createElement("div");
   cell.className = "tt-header";
@@ -669,10 +658,13 @@ function renderModalTimetableGrid() {
   const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
   const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 
+  gridContainer.style.display = "grid";
+  gridContainer.style.gridTemplateColumns = "90px repeat(10, minmax(75px, 1fr))";
+
   const timeLabels = [
-    "08:45-09:45\n(Period 1)", "09:45-10:45\n(Period 2)", "10:45-11:00\n(BREAK)",
-    "11:00-12:00\n(Period 3)", "12:00-01:00\n(Period 4)", "01:00-02:00\n(LUNCH)",
-    "02:00-03:00\n(Period 5)", "03:00-03:15\n(BREAK)", "03:15-04:15\n(Period 6)", "04:15-05:16\n(Period 7)"
+    "08:45-09:45\n(P1)", "09:45-10:45\n(P2)", "10:45-11:00\n(BREAK)",
+    "11:00-12:00\n(P3)", "12:00-01:00\n(P4)", "01:00-02:00\n(LUNCH)",
+    "02:00-03:00\n(P5)", "03:00-03:15\n(BREAK)", "03:15-04:15\n(P6)", "04:15-05:15\n(P7)"
   ];
 
   gridContainer.appendChild(createHeaderCell("DAY / TIMINGS"));
@@ -688,35 +680,21 @@ function renderModalTimetableGrid() {
     
     let periodTrackingCounter = 1;
     for (let currentSlot = 1; currentSlot <= 10; currentSlot++) {
-      if (currentSlot === 3) {
+      if (currentSlot === 3 || currentSlot === 6 || currentSlot === 8) {
         let breakCell = document.createElement("div");
         breakCell.className = "tt-cell tt-break";
-        breakCell.innerText = "BREAK";
-        gridContainer.appendChild(breakCell);
-        continue;
-      }
-      if (currentSlot === 6) {
-        let lunchBreak = document.createElement("div");
-        lunchBreak.className = "tt-cell tt-break";
-        lunchBreak.innerText = "LUNCH";
-        gridContainer.appendChild(lunchBreak);
-        continue;
-      }
-      if (currentSlot === 8) {
-        let breakCell = document.createElement("div");
-        breakCell.className = "tt-cell tt-break";
-        breakCell.innerText = "BREAK";
+        breakCell.innerText = currentSlot === 6 ? "LUNCH" : "BREAK";
         gridContainer.appendChild(breakCell);
         continue;
       }
 
       let cellValue = mappedDayData ? mappedDayData[periodTrackingCounter + 1] : "";
       let cellNode = document.createElement("div");
-      cellNode.className = "tt-cell";
+      cellNode.className = "tt-cell compact-view-cell";
 
       if (cellValue && cellValue.includes("|")) {
         let [sub, staff] = cellValue.split("|");
-        cellNode.innerHTML = `<div class="tt-subject-title">${sub}</div><div class="tt-staff-lbl">${staff}</div>`;
+        cellNode.innerHTML = `<div class="tt-subject-title" title="${sub}">${sub}</div><div class="tt-staff-lbl" title="${staff}">${staff}</div>`;
       } else {
         cellNode.innerText = "-";
       }
@@ -725,7 +703,6 @@ function renderModalTimetableGrid() {
     }
   });
 }
-
 // NEW FUNCTION: DOWNLOAD TIMETABLE AS HIGH-QUALITY IMAGE
 function downloadTimetableImage() {
   const classId = document.getElementById("modal-tt-class-select").value;
