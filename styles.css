@@ -669,8 +669,8 @@ tr:hover {
 .tt-break {
   font-size: 10px !important;
   letter-spacing: 0px !important;
-  writing-mode: vertical-lr;
-  transform: rotate(180deg);
+  writing-mode: vertical-rl; /* 180 deg rotation-ai thaduka idhu vertical-rl aaga iruka vendum */
+  transform: none !important; /* Intha rotation-ai remove seiyavum */
   padding: 2px !important;
 }
 
