@@ -252,9 +252,14 @@ function sheetTabForKey(key, optionalRowData = null) {
 
 // 6. ROLE CONFIGURATION GATEWAY
 function handleSystemLogin() {
-  const uid = document.getElementById("login-uid").value.trim();
-  const pass = document.getElementById("login-pass").value.trim();
+  const uidElement = document.getElementById("login-uid");
+  const passElement = document.getElementById("login-pass");
   const errorMsg = document.getElementById("login-error");
+
+  if (!uidElement || !passElement) return;
+
+  const uid = uidElement.value.trim();
+  const pass = passElement.value.trim();
 
   if (!uid || !pass) {
     errorMsg.innerText = "Please provide valid credentials!";
@@ -263,17 +268,24 @@ function handleSystemLogin() {
   }
 
   errorMsg.style.display = "none";
+  
+  // Hardcoded Admin Login First
+  if (uid === "admin" && pass === "admin") {
+    activeUserSession = { role: "ADMIN", uid: "admin", name: "System Administrator" };
+    localStorage.setItem("ACTIVE_SESSION_CACHE", JSON.stringify(activeUserSession));
+    applyAuthorizationRules("ADMIN", "System Administrator");
+    return;
+  }
+
   const users = JSON.parse(localStorage.getItem("MASTER_USERS")) || [];
-  let userRecord = users.find(u => u[0] == uid && u[2] == pass);
+  
+  // To avoid string/number type errors, converted values to String for comparison
+  let userRecord = users.find(u => String(u[0]).trim() === String(uid) && String(u[2]).trim() === String(pass));
 
   if (userRecord) {
     activeUserSession = { role: userRecord[3], uid: userRecord[0], name: userRecord[1] };
     localStorage.setItem("ACTIVE_SESSION_CACHE", JSON.stringify(activeUserSession));
     applyAuthorizationRules(userRecord[3], userRecord[1]);
-  } else if (uid === "admin" && pass === "admin") {
-    activeUserSession = { role: "ADMIN", uid: "admin", name: "System Administrator" };
-    localStorage.setItem("ACTIVE_SESSION_CACHE", JSON.stringify(activeUserSession));
-    applyAuthorizationRules("ADMIN", "System Administrator");
   } else {
     errorMsg.innerText = "Authentication Failed: Invalid user credentials.";
     errorMsg.style.display = "block";
