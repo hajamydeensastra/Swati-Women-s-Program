@@ -726,6 +726,33 @@ function renderModalTimetableGrid() {
   });
 }
 
+// NEW FUNCTION: DOWNLOAD TIMETABLE AS HIGH-QUALITY IMAGE
+function downloadTimetableImage() {
+  const classId = document.getElementById("modal-tt-class-select").value;
+  if (!classId) {
+    alert("Please select a target class sector first to download the timetable!");
+    return;
+  }
+  
+  const element = document.getElementById("modal-tt-runtime-grid");
+  
+  // Using html2canvas with higher resolution configuration
+  html2canvas(element, {
+    scale: 3, // Multiplies quality resolution by 3x
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false
+  }).then(canvas => {
+    const link = document.createElement("a");
+    link.download = `Timetable_${classId}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }).catch(err => {
+    console.error("Error generating image:", err);
+    alert("Failed to download timetable image.");
+  });
+}
+
 // 11. STAFF WORKSPACE DASHBOARD RENDERER (OPTIMIZED WITH COMPLETED TRACKING)
 function renderStaffDashboardConsole() {
   const staffName = activeUserSession.name;
