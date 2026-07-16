@@ -69,6 +69,14 @@ function setupGlobalEvents() {
       
       const targetSec = document.getElementById(targetSectionId);
       if(targetSec) targetSec.classList.add("active");
+
+      // Reset Matrix View mode screens visibility on section change
+      if(targetSectionId === "timetable-creator-section") {
+        const configureBlock = document.getElementById("tt-configure-block");
+        const matrixBlock = document.getElementById("tt-matrix-block");
+        if(configureBlock) configureBlock.style.display = "none";
+        if(matrixBlock) matrixBlock.style.display = "none";
+      }
     });
   });
 
@@ -114,6 +122,22 @@ function toggleHostelFieldsVisibility() {
       if(innerInput) innerInput.value = ""; 
     }
   });
+}
+
+// 4.5 NEW RUNTIME: TOGGLE TIMETABLE PLANNER MATRIX FORM BLOCK VIEWERS
+function toggleTimetablePlannerMode(workspaceMode) {
+  const configPanel = document.getElementById("tt-configure-block");
+  const matrixPanel = document.getElementById("tt-matrix-block");
+  if(!configPanel || !matrixPanel) return;
+
+  if (workspaceMode === "create") {
+    configPanel.style.display = "block";
+    matrixPanel.style.display = "none";
+  } else if (workspaceMode === "existing") {
+    configPanel.style.display = "none";
+    matrixPanel.style.display = "block";
+    renderTimetableGridDisplay();
+  }
 }
 
 // 5. SECURE ENDPOINT SYNCHRONIZATION
