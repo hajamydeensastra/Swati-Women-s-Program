@@ -223,7 +223,6 @@ function renderAdminDashboardSummary() {
   let hostelerCount = 0;
   
   students.forEach(student => {
-    // Accommodation configuration is at index 11
     let accommodation = student[11] ? String(student[11]).trim().toLowerCase() : "";
     if (accommodation === "dayscholar") {
       dayscholarCount++;
@@ -366,7 +365,7 @@ function refreshFormDropdownLists() {
   populateSelectControl("tt-class-select", classList, 0, 1);
   populateSelectControl("att-class-select", classList, 0, 1);
   populateSelectControl("marks-class-select", classList, 0, 1);
-  populateSelectControl("modal-tt-class-select", classList, 0, 1); // Modal Timetable Selector
+  populateSelectControl("modal-tt-class-select", classList, 0, 1);
 
   populateSelectControl("alloc-staff-select", staffList, 1, 0); 
   populateSelectControl("alloc-class-select", classList, 0, 1);
@@ -467,7 +466,6 @@ function renderAllTables() {
   renderDatasetToTable("allocation-table-body", "MASTER_ALLOCATIONS", [0, 1, 2], ["Faculty", "Class ID", "Subject Code"]);
   renderDatasetToTable("student-table-body", "MASTER_STUDENTS", [0, 1, 2, 3, 4, 5, 6, 11], ["ID", "Name", "Class", "Course", "Status", "DOB", "Age", "Accom"]);
   
-  // Render Dynamic Counters on Admin Dashboard
   renderAdminDashboardSummary();
 }
 
@@ -668,7 +666,7 @@ function openTimetableModalPopup() {
   const modal = document.getElementById("timetable-popup-modal");
   if (modal) {
     modal.style.display = "flex";
-    renderModalTimetableGrid(); // Trigger initial state
+    renderModalTimetableGrid(); 
   }
 }
 
@@ -1182,11 +1180,9 @@ function renderStudentSelfProfileViewer() {
   }
 }
 
-function handleAttendanceCategoryToggle() {
-  // Utility toggle helper
-}
+function handleAttendanceCategoryToggle() {}
 
-// 14. NEW MODULE: DYNAMIC MARKS CALCULATION & PROCESSING ENGINE (WITH EDIT & DUPLICATE CHECKS)
+// 14. NEW MODULE: DYNAMIC MARKS CALCULATION & PROCESSING ENGINE
 function filterSubjectsForMarksEntry() {
   const classId = document.getElementById("marks-class-select").value;
   const subjectSelect = document.getElementById("marks-subject-select");
@@ -1255,7 +1251,6 @@ function loadMarksEntrySheet() {
   `;
 
   classStudents.forEach(student => {
-    // Looks up pre-existing entry dynamically to allow future edits
     let existingRecord = marksLogs.find(m => m[0] === student[0] && m[1] === subjectCode);
     
     let cia1 = existingRecord ? existingRecord[2] : "0";
@@ -1331,7 +1326,6 @@ async function saveStudentsMarksRegister() {
     let sem = inputs[5].value || "0";
     let total = row.querySelector(".row-grand-total").innerText;
 
-    // Checks for duplicate entries dynamically before updating sheet memory map
     let matchIdx = marksLogs.findIndex(m => m[0] === studentId && m[1] === subjectCode);
     let payload = [studentId, subjectCode, cia1, cia2, cia3, assign, att, sem, total];
     
