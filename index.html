@@ -699,7 +699,22 @@
         <header>
           <h1>Matrix Timetable Planner</h1>
         </header>
-        <div class="data-section">
+
+        <!-- New Mode Selection Panel -->
+        <div class="data-section" style="margin-bottom: 25px;">
+          <h2>Select Planner Workspace Mode</h2>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+            <button class="action-btn" id="btn-mode-create" onclick="toggleTimetablePlannerMode('create')" style="background: var(--slate-900); display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-plus-circle"></i> Create New Timetable
+            </button>
+            <button class="action-btn" id="btn-mode-existing" onclick="toggleTimetablePlannerMode('existing')" style="background: var(--sky-600); display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-th"></i> View / Edit Already Created Timetable
+            </button>
+          </div>
+        </div>
+
+        <!-- Conditional Configure Container -->
+        <div class="data-section" id="tt-configure-block" style="display: none;">
           <h2>Configure Matrix Period Allocation</h2>
           <div class="form-grid-layout">
             <div class="form-field-group">
@@ -759,7 +774,8 @@
           </button>
         </div>
 
-        <div class="data-section">
+        <!-- Conditional View Matrix Container -->
+        <div class="data-section" id="tt-matrix-block" style="display: none;">
           <h2>Dynamic Interactive Matrix View</h2>
           <div class="tt-grid" id="tt-matrix-runtime-grid" style="grid-template-columns: 140px repeat(10, minmax(130px, 1fr));"></div>
         </div>
