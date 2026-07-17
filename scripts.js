@@ -124,6 +124,162 @@ function toggleHostelFieldsVisibility() {
   });
 }
 
+function renderSchedulerConfigGrid() {
+  const classId = document.getElementById("tt-class-select").value;
+  const gridContainer = document.getElementById("tt-scheduler-interactive-grid");
+  if (!gridContainer) return;
+
+  if (!classId) {
+    gridContainer.innerHTML = `<p style="grid-column: span 11; text-align: center; color: var(--slate-400); padding: 40px 0;">Please select a class from the dropdown above to manage the timetable grid.</p>`;
+    return;
+  }
+
+  gridContainer.innerHTML = "";
+  const ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
+
+  const timeLabels = [
+    "08:45-09:45\n(Period 1)", "09:45-10:45\n(Period 2)", "10:45-11:00\n(BREAK)",
+    "11:00-12:00\n(Period 3)", "12:00-01:00\n(Period 4)", "01:00-02:00\n(LUNCH)",
+    "02:00-03:00\n(Period 5)", "03:00-03:15\n(BREAK)", "03:15-04:15\n(Period 6)", "04:15-05:16\n(Period 7)"
+  ];
+
+  gridContainer.appendChild(createHeaderCell("DAY / TIMINGS"));
+  timeLabels.forEach(lbl => gridContainer.appendChild(createHeaderCell(lbl)));
+
+  days.forEach(dayName => {
+    let dayRowCell = document.createElement("div");
+    dayRowCell.className = "tt-cell tt-day";
+    dayRowCell.innerText = dayName;
+    gridContainer.appendChild(dayRowCell);
+
+    let mappedDayData = ttList.find(row => row[0] === classId && row[1] === dayName);
+    
+    let periodTrackingCounter = 1;
+    for (let currentSlot = 1; currentSlot <= 10; currentSlot++) {
+      if ([3, 6, 8].includes(currentSlot)) {
+        let breakCell = document.createElement("div");
+        breakCell.className = "tt-cell tt-break";
+        breakCell.innerText = currentSlot === 6 ? "LUNCH" : "BREAK";
+        gridContainer.appendChild(breakCell);
+        continue;
+      }
+
+      let cellValue = mappedDayData ? mappedDayData[periodTrackingCounter + 1] : "";
+      let cellNode = document.createElement("div");
+      cellNode.className = "tt-cell tt-interactive-cell";
+      cellNode.style.cursor = "pointer";
+      cellNode.style.transition = "background-color 0.2s";
+      
+      // Highlight on hover effect
+      cellNode.onmouseover = () => cellNode.style.backgroundColor = "#f1f5f9";
+      cellNode.onmouseout = () => cellNode.style.backgroundColor = "";
+
+      if (cellValue && cellValue.includes("|")) {
+        let [sub, staff] = cellValue.split("|");
+        cellNode.innerHTML = `<div class="tt-subject-title" style="color: var(--sky-600); font-weight:700;">${sub}</div><div class="tt-staff-lbl" style="font-size: 11px; opacity:0.8;">${staff}</div>`;
+      } else {
+        cellNode.innerHTML = `<span style="color: var(--slate-400); font-style: italic;">FREE</span>`;
+      }
+
+      // Open Popover configuration inline
+      let currentHour = periodTrackingCounter;
+      cellNode.addEventListener("click", () => openQuickCellEditor(dayName, currentHour, cellValue));
+
+      gridContainer.appendChild(cellNode);
+      periodTrackingCounter++;
+    }
+  });
+}
+
+// 2. Open popover panel loader
+function openQuickCellEditor(dayName, hourIndex, rawValue) {
+  document.getElementById("editor-target-day").value = dayName;
+  document.getElementById("editor-target-hour").value = hourIndex;
+  document.getElementById("editor-current-slot-info").innerText = `${dayName} - Period ${hourIndex}`;
+
+  let subVal = "";
+  let staff1 = "";
+  let staff2 = "";
+  let staff3 = "";
+
+  if (rawValue && rawValue.includes("|")) {
+    let [subToken, staffToken] = rawValue.split("|");
+    subVal = subToken.trim();
+    if (staffToken && staffToken !== "NO FACULTY ASSIGNED") {
+      let staffs = staffToken.split("+").map(s => s.trim());
+      staff1 = staffs[0] || "";
+      staff2 = staffs[1] || "";
+      staff3 = staffs[2] || "";
+    }
+  }
+
+  document.getElementById("editor-sub-val").value = subVal;
+  document.getElementById("editor-staff1-val").value = staff1;
+  document.getElementById("editor-staff2-val").value = staff2;
+  document.getElementById("editor-staff3-val").value = staff3;
+
+  document.getElementById("quick-cell-editor").style.display = "block";
+  document.getElementById("quick-cell-editor").scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeQuickCellEditor() {
+  document.getElementById("quick-cell-editor").style.display = "none";
+}
+
+// 3. Save cell edits directly back to database array and auto-sync
+async function saveQuickCellChanges() {
+  const classId = document.getElementById("tt-class-select").value;
+  const targetDay = document.getElementById("editor-target-day").value;
+  const targetHour = parseInt(document.getElementById("editor-target-hour").value);
+
+  const subVal = document.getElementById("editor-sub-val").value || "FREE PERIOD";
+  const staffVal1 = document.getElementById("editor-staff1-val").value || "";
+  const staffVal2 = document.getElementById("editor-staff2-val").value || "";
+  const staffVal3 = document.getElementById("editor-staff3-val").value || "";
+
+  let combinedStaffs = [staffVal1, staffVal2, staffVal3].filter(s => s !== "").join(" + ");
+  if (!combinedStaffs) combinedStaffs = "NO FACULTY ASSIGNED";
+
+  const customCellVal = `${subVal}|${combinedStaffs}`;
+
+  let ttList = JSON.parse(localStorage.getItem("CLASS_TIMETABLES")) || [];
+  let existingIndex = ttList.findIndex(row => row[0] === classId && row[1] === targetDay);
+
+  let dynamicPayload = [];
+  if (existingIndex > -1) {
+    dynamicPayload = [...ttList[existingIndex]];
+    // Array layout: [ClassID, Day, Hour_1, Hour_2, Hour_3, Hour_4, Hour_5, Hour_6, Hour_7, RecordID]
+    dynamicPayload[targetHour + 1] = customCellVal; 
+  } else {
+    // If Day Row has no records, initialize empty columns list
+    dynamicPayload = [classId, targetDay, "", "", "", "", "", "", "", "REC-" + Date.now()];
+    dynamicPayload[targetHour + 1] = customCellVal;
+  }
+
+  if (existingIndex > -1) {
+    ttList[existingIndex] = dynamicPayload;
+  } else {
+    ttList.push(dynamicPayload);
+  }
+
+  localStorage.setItem("CLASS_TIMETABLES", JSON.stringify(ttList));
+  renderSchedulerConfigGrid();
+  closeQuickCellEditor();
+
+  // Trigger Sheet integration automatic update API
+  let targetTab = sheetTabForKey("CLASS_TIMETABLES");
+  let recordId = dynamicPayload[dynamicPayload.length - 1];
+  if (targetTab) {
+    if (existingIndex > -1) {
+      await syncWithGoogleSheet(targetTab, dynamicPayload, SYSTEM_SCHEMA["CLASS_TIMETABLES"], "UPDATE", recordId);
+    } else {
+      await syncWithGoogleSheet(targetTab, dynamicPayload, SYSTEM_SCHEMA["CLASS_TIMETABLES"], "CREATE");
+    }
+  }
+  alert("Cell updated and auto-synchronized to cloud!");
+}
+
 // 4.5 NEW RUNTIME: TOGGLE TIMETABLE PLANNER MATRIX FORM BLOCK VIEWERS
 function toggleTimetablePlannerMode(workspaceMode) {
   const configPanel = document.getElementById("tt-configure-block");
@@ -133,6 +289,7 @@ function toggleTimetablePlannerMode(workspaceMode) {
   if (workspaceMode === "create") {
     configPanel.style.display = "block";
     matrixPanel.style.display = "none";
+    renderSchedulerConfigGrid();
   } else if (workspaceMode === "existing") {
     configPanel.style.display = "none";
     matrixPanel.style.display = "block";
@@ -371,12 +528,11 @@ function refreshFormDropdownLists() {
   populateSelectControl("alloc-class-select", classList, 0, 1);
   populateSelectControl("alloc-sub-select", subjectList, 0, 1);
 
-  for (let hourIdx = 1; hourIdx <= 7; hourIdx++) {
-    populateSelectControl(`tt-sub-h${hourIdx}`, subjectList, 0, 1, "FREE PERIOD");
-    populateSelectControl(`tt-staff1-h${hourIdx}`, staffList, 1, 0, "PRIMARY STAFF");
-    populateSelectControl(`tt-staff2-h${hourIdx}`, staffList, 1, 0, "CO-STAFF A (OPTIONAL)");
-    populateSelectControl(`tt-staff3-h${hourIdx}`, staffList, 1, 0, "CO-STAFF B (OPTIONAL)");
-  }
+  // Setup options inside quick popover elements
+  populateSelectControl("editor-sub-val", subjectList, 0, 1, "FREE PERIOD");
+  populateSelectControl("editor-staff1-val", staffList, 1, 0, "PRIMARY STAFF");
+  populateSelectControl("editor-staff2-val", staffList, 1, 0, "CO-STAFF A (OPTIONAL)");
+  populateSelectControl("editor-staff3-val", staffList, 1, 0, "CO-STAFF B (OPTIONAL)");
 }
 
 function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, defaultAlternativeText = null) {
