@@ -624,18 +624,3 @@ tr:hover {
 
 .tab-content { display: none; }
 .tab-content.active { display: block; }
-
-* { 
-  margin: 0; 
-  padding: 0; 
-  box-sizing: border-box; 
-  font-family: 'Inter', sans-serif; 
-}
-
-:root {
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94;
-}
