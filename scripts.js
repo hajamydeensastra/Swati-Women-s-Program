@@ -2,7 +2,7 @@
    INSTITUTIONAL CORE SYSTEM ENGINE (MODULAR RUNTIME) - OPTIMIZED WITH PHOTO UPLOADER
    ========================================================================== */
 
-const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbziEkpaxaRIDOPGSptVsFb9DDpQHI4pj5iDwlwBdn2JmC782750cmzuA77v0rIBT7Xd/exec"; 
+const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbypV-SgefCuYdIwGlMDXxpFYA8qXGE3nX2dTFoHukhxeW7w64q3rD5uFmXPzOjQCa6J/exec"; 
 
 const SYSTEM_SCHEMA = {
   MASTER_USERS: ["UID", "Name", "Password", "Role", "RecordID"],
