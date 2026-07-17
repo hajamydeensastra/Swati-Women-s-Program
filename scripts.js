@@ -3,7 +3,7 @@
    ========================================================================== */
 
 // 1. DYNAMIC DEPLOYMENT CONFIGURATIONS
-const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxz98uZeTA_WLPSyvTJuZhmGK93VuZDClCZ3Wco5dAnfd-hHCL4BCwsqMUd15Btd7of/exec"; 
+const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbziEkpaxaRIDOPGSptVsFb9DDpQHI4pj5iDwlwBdn2JmC782750cmzuA77v0rIBT7Xd/exec"; 
 
 // 2. RUNTIME DATABASE STATE SCHEMA
 const SYSTEM_SCHEMA = {
