@@ -387,6 +387,7 @@ function refreshFormDropdownLists() {
   populateSelectControl("std-course-select", courseList, 0, 1);
   populateSelectControl("std-class-select", classList, 0, 1);
   populateSelectControl("tt-class-select", classList, 0, 1);
+  populateSelectControl("tt-class-select-form", classList, 0, 1); // For the planning creator form
   populateSelectControl("att-class-select", classList, 0, 1);
   populateSelectControl("marks-class-select", classList, 0, 1);
   populateSelectControl("modal-tt-class-select", classList, 0, 1);
@@ -564,14 +565,14 @@ function getInputIdsForTableKey(tblKey) {
     MASTER_STAFFS: ["stf-id", "stf-name", "stf-dept", "stf-contact"],
     MASTER_ALLOCATIONS: ["alloc-staff-select", "alloc-class-select", "alloc-sub-select"],
     MASTER_STUDENTS: ["std-id", "std-name", "std-class-select", "std-course-select", "std-status", "std-dob", "std-age", "std-primary", "std-secondary", "std-10th", "std-12th", "std-accom", "std-hostel-name", "std-room", "std-address", "std-photo"],
-    CLASS_TIMETABLES: ["tt-class-select", "tt-day-select"]
+    CLASS_TIMETABLES: ["tt-class-select-form", "tt-day-select"]
   };
   return formsMapping[tblKey] || [];
 }
 
 // 10. TIMETABLE RUNTIME LAYOUT MATRIX BUILDER - 7 PERIOD CONFIGURATION SUPPORT
 function saveTimetableRecord() {
-  const classId = document.getElementById("tt-class-select").value;
+  const classId = document.getElementById("tt-class-select-form").value;
   const targetDay = document.getElementById("tt-day-select").value;
 
   if (!classId || !targetDay) {
