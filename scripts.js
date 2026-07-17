@@ -38,6 +38,7 @@ let editingRowIndices = {
 // 4. ON SYSTEM LOAD INITIALIZER
 window.addEventListener("DOMContentLoaded", () => {
   initializeLocalDatabases();
+  setupSimplifiedTimetableRows();
   setupGlobalEvents();
   autoLoginIfSessionExists();
   
@@ -54,6 +55,29 @@ function initializeLocalDatabases() {
       localStorage.setItem(key, JSON.stringify([]));
     }
   });
+}
+
+// Generates simple and easy to track rows for timetable input matrix panel
+function setupSimplifiedTimetableRows() {
+  const container = document.getElementById("tt-simplified-rows-container");
+  if (!container) return;
+  container.innerHTML = "";
+  for (let hr = 1; hr <= 7; hr++) {
+    container.insertAdjacentHTML("beforeend", `
+      <div class="tt-easy-row">
+        <div class="tt-easy-hour-badge">${hr} Hour</div>
+        <div>
+          <select id="tt-sub-h${hr}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;"></select>
+        </div>
+        <div>
+          <select id="tt-staff1-h${hr}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;"></select>
+          <!-- Structurally maintained hidden fields to avoid breaking complex backend string formats -->
+          <input type="hidden" id="tt-staff2-h${hr}" value="">
+          <input type="hidden" id="tt-staff3-h${hr}" value="">
+        </div>
+      </div>
+    `);
+  }
 }
 
 function setupGlobalEvents() {
@@ -374,8 +398,6 @@ function refreshFormDropdownLists() {
   for (let hourIdx = 1; hourIdx <= 7; hourIdx++) {
     populateSelectControl(`tt-sub-h${hourIdx}`, subjectList, 0, 1, "FREE PERIOD");
     populateSelectControl(`tt-staff1-h${hourIdx}`, staffList, 1, 0, "PRIMARY STAFF");
-    populateSelectControl(`tt-staff2-h${hourIdx}`, staffList, 1, 0, "CO-STAFF A (OPTIONAL)");
-    populateSelectControl(`tt-staff3-h${hourIdx}`, staffList, 1, 0, "CO-STAFF B (OPTIONAL)");
   }
 }
 
@@ -561,10 +583,8 @@ function saveTimetableRecord() {
   for (let hr = 1; hr <= 7; hr++) {
     const subVal = document.getElementById(`tt-sub-h${hr}`).value || "FREE PERIOD";
     const staffVal1 = document.getElementById(`tt-staff1-h${hr}`).value || "";
-    const staffVal2 = document.getElementById(`tt-staff2-h${hr}`).value || "";
-    const staffVal3 = document.getElementById(`tt-staff3-h${hr}`).value || "";
     
-    let combinedStaffs = [staffVal1, staffVal2, staffVal3].filter(s => s !== "").join(" + ");
+    let combinedStaffs = [staffVal1].filter(s => s !== "").join(" + ");
     if(!combinedStaffs) combinedStaffs = "NO FACULTY ASSIGNED";
 
     dynamicPayload.push(`${subVal}|${combinedStaffs}`);
