@@ -82,9 +82,9 @@
   <div class="login-page" id="login-screen">
     <div class="login-logo-wrapper">
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-      <img src="Greaves_Logo.jpg" alt="Greaves Logo" style="height: 80px; width: auto; object-fit: contain;">
-      <img src="Swati_Logo.jpg" alt="Swati Logo" style="height: 80px; width: auto; object-fit: contain;">
-      <img src="Pygmalion_Foundation_logo.jpg" alt="Pygmalion Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Greaves_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Swati_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Pygmalion_Foundation_logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
     </div>
     <div class="login-container">
       <div class="login-header">
@@ -117,9 +117,9 @@
   <header class="global-logo-header" id="global-header" style="display: none;">
     <div class="logo-container-flex">
       <img src="SASTRA_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
-      <img src="Greaves_Logo.jpg" alt="Greaves Logo" style="height: 80px; width: auto; object-fit: contain;">
-      <img src="Swati_Logo.jpg" alt="Swati Logo" style="height: 80px; width: auto; object-fit: contain;">
-      <img src="Pygmalion_Foundation_logo.jpg" alt="Pygmalion Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Greaves_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Swati_Logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
+      <img src="Pygmalion_Foundation_logo.jpg" alt="SASTRA Logo" style="height: 80px; width: auto; object-fit: contain;">
       <span class="mode-badge" id="mode-flag-badge">PORTAL HUB</span>
     </div>
   </header>
@@ -738,119 +738,130 @@
           <div id="tt-hours-dynamic-wrapper" style="margin-top: 30px; display: flex; flex-direction: column; gap: 16px;">
             <script>
               window.addEventListener("DOMContentLoaded", () => {
-                const ttHoursWrapper = document.getElementById("tt-hours-dynamic-wrapper");
-                if (ttHoursWrapper) {
-                  ttHoursWrapper.innerHTML = "";
-                  for (let hr = 1; hr <= 7; hr++) {
-                    ttHoursWrapper.insertAdjacentHTML("beforeend", `
-                      <div class="data-section" style="background:#f8fafc; border:1px solid var(--slate-200); padding:20px; margin-bottom: 5px;">
-                        <h4 style="font-size:14px; font-weight:800; color:var(--slate-800); border-bottom:1px solid var(--slate-200); padding-bottom:10px; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
-                          <span style="background:var(--sky-500); color:white; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">${hr}</span>
-                          Configure Period Session ${hr} Hour
-                        </h4>
-                        <div class="form-grid-layout">
-                          <div class="form-field-group">
-                            <label>Mapped Academic Subject</label>
-                            <select id="tt-sub-h${hr}"></select>
-                          </div>
-                          <div class="form-field-group">
-                            <label>Primary Active Staff</label>
-                            <select id="tt-staff1-h${hr}"></select>
-                          </div>
-                          <div class="form-field-group">
-                            <label>Co-Staff A (Optional Allocation)</label>
-                            <select id="tt-staff2-h${hr}"></select>
-                          </div>
-                          <div class="form-field-group">
-                            <label>Co-Staff B (Optional Allocation)</label>
-                            <select id="tt-staff3-h${hr}"></select>
-                          </div>
+                const wrapperNode = document.getElementById('tt-hours-dynamic-wrapper');
+                if (wrapperNode) {
+                  for (let hrIdx = 1; hrIdx <= 7; hrIdx++) {
+                    let htmlStr = `
+                      <div class="inline-form" style="border-bottom: 1px dashed var(--slate-200); padding-bottom: 14px; grid-template-columns: 80px repeat(4, 1fr);">
+                        <div class="form-field-group" style="justify-content: center;">
+                          <span style="font-size: 13px; font-weight:700; color: var(--slate-700)">PERIOD ${hrIdx}</span>
                         </div>
-                      </div>
-                    `);
+                        <div class="form-field-group">
+                          <label>Subject</label>
+                          <select id="tt-sub-h${hrIdx}"></select>
+                        </div>
+                        <div class="form-field-group">
+                          <label>Primary Instructor</label>
+                          <select id="tt-staff1-h${hrIdx}"></select>
+                        </div>
+                        <div class="form-field-group">
+                          <label>Co-Instructor A</label>
+                          <select id="tt-staff2-h${hrIdx}"></select>
+                        </div>
+                        <div class="form-field-group">
+                          <label>Co-Instructor B</label>
+                          <select id="tt-staff3-h${hrIdx}"></select>
+                        </div>
+                      </div>`;
+                    wrapperNode.insertAdjacentHTML('beforeend', htmlStr);
                   }
-                  ttHoursWrapper.insertAdjacentHTML("beforeend", `
-                    <button class="action-btn" onclick="saveTimetableRecord()" style="align-self: flex-start; margin-top:20px;">
-                      Save Matrix Timetable Block
-                    </button>
-                  `);
                 }
               });
             </script>
           </div>
+          <button class="action-btn" onclick="saveTimetableRecord()" style="margin-top: 30px; width: 100%;">
+            Commit Period Mapping to Matrix Database
+          </button>
         </div>
 
-        <!-- Conditional View Matrix Timetable Container -->
+        <!-- Conditional View Matrix Container -->
         <div class="data-section" id="tt-matrix-block" style="display: none;">
-          <h2>Matrix Timetable Board</h2>
-          <div class="tt-grid" id="tt-matrix-runtime-grid"></div>
+          <h2>Dynamic Interactive Matrix View</h2>
+          <div class="tt-grid" id="tt-matrix-runtime-grid" style="grid-template-columns: 140px repeat(10, minmax(130px, 1fr));"></div>
         </div>
       </div>
 
-      <!-- STAFF ATTENDANCE ENTRY MODULE -->
       <div id="staff-attendance-section" class="tab-content">
         <header>
-          <h1>Daily Class Attendance Sector</h1>
+          <h1>Daily Attendance Terminal</h1>
         </header>
         <div class="data-section">
-          <h2>Retrieve Target Class Allocation Details</h2>
-          <div class="form-grid-layout">
+          <h2>Generate Academic Register Checklist</h2>
+          <div class="form-grid-layout" style="align-items: end;">
             <div class="form-field-group">
-              <label>Pick Today's Target Working Date *</label>
-              <input type="date" id="att-date-picker" onchange="generateAttendanceRegisterForm()" required>
+              <label>Target Sectors Class *</label>
+              <select id="att-class-select" onchange="filterSubjectsByAssignedStaff()"></select>
             </div>
-            <div class="form-field-group" id="admin-att-type-wrapper">
-              <label>Managing Class Group *</label>
-              <select id="att-class-select" onchange="generateAttendanceRegisterForm()"></select>
+            <!-- Admin Event/Internship vs Staff Attendance Logic Switch -->
+            <div class="form-field-group" id="admin-att-type-wrapper" style="display: none;">
+              <label>Attendance Category *</label>
+              <select id="att-category-select" onchange="handleAttendanceCategoryToggle()">
+                <option value="REGULAR">Regular Class Attendance</option>
+                <option value="EVENT">Event Attendance</option>
+                <option value="INTERNSHIP">Internship Attendance</option>
+              </select>
             </div>
+            <div class="form-field-group">
+              <label>Active Working Date *</label>
+              <input type="date" id="att-date-picker" onchange="filterSubjectsByAssignedStaff()">
+            </div>
+            <button class="action-btn" onclick="generateAttendanceRegisterForm()" style="height: 46px;">
+              Load Checklist
+            </button>
           </div>
         </div>
 
         <div class="data-section">
-          <h2>Subject & Hours Checklist Generation Panel</h2>
+          <h2>Active Attendance Verification Sheet</h2>
           <div id="att-students-list-view">
-            <p style="padding: 20px; color: var(--slate-400);">Choose target class group mapping parameter details first.</p>
+            <p style="padding: 20px; color: var(--slate-400); font-weight: 500;">
+              No active register generated. Map Class filters above and load checklist sheets.
+            </p>
           </div>
-          <button class="action-btn" onclick="saveFacultyAttendanceRegister()" style="margin-top: 25px; background: var(--slate-900);">
-            Commit & Sync Attendance Register
+          <button class="action-btn" onclick="saveFacultyAttendanceRegister()" style="margin-top: 30px; width: 100%; background: var(--slate-900);">
+            Commit & Sync Verification Sheet
           </button>
         </div>
       </div>
 
-      <!-- NEW STAFF MODULE: MARKS ENTRY SYSTEM -->
+      <!-- DYNAMIC MARKS ENTRY TERMINAL MODULE -->
       <div id="marks-entry-management-section" class="tab-content">
         <header>
-          <h1>Marks Entry Registry Console</h1>
+          <h1>Student Marks Verification Console</h1>
         </header>
         <div class="data-section">
-          <h2>Retrieve Target Class Academic Details</h2>
-          <div class="form-grid-layout">
+          <h2>Generate Academic Marks Sheet</h2>
+          <div class="form-grid-layout" style="align-items: end;">
             <div class="form-field-group">
-              <label>Select Target Class Sector *</label>
+              <label>Target Sectors Class *</label>
               <select id="marks-class-select" onchange="filterSubjectsForMarksEntry()"></select>
             </div>
             <div class="form-field-group">
-              <label>Select Mapped Subject Index *</label>
+              <label>Target Subject Index *</label>
               <select id="marks-subject-select" onchange="loadMarksEntrySheet()"></select>
             </div>
+            <button class="action-btn" onclick="loadMarksEntrySheet()" style="height: 46px;">
+              Load Marks Sheet
+            </button>
           </div>
         </div>
 
         <div class="data-section">
-          <h2>Student Evaluated Performance Sheet Entry</h2>
-          <div id="marks-entry-container" class="table-container" style="max-height: 500px;">
-            <p style="padding: 20px; color: var(--slate-400); text-align: center;">Choose managing class unit and subject index allocation to start evaluation processing.</p>
+          <h2>Active Internal Evaluation Register</h2>
+          <div id="marks-entry-container" class="table-container">
+            <p style="padding: 20px; color: var(--slate-400); font-weight: 500;">
+              No active marks spreadsheet generated. Map Class filters above and look up evaluations.
+            </p>
           </div>
-          <button class="action-btn" onclick="saveStudentsMarksRegister()" style="margin-top: 25px; background: var(--slate-900);">
-            Compute & Sync Evaluated Performance Sheet
+          <button class="action-btn" onclick="saveStudentsMarksRegister()" style="margin-top: 30px; width: 100%; background: var(--slate-900);">
+            Commit & Sync Marks Ledger
           </button>
         </div>
       </div>
 
-      <!-- STUDENT PORTAL INTERACTIVE VIEW -->
       <div id="student-profile-section" class="tab-content">
         <header>
-          <h1>My Academic Profile Viewer</h1>
+          <h1>Student Profile Information Desk</h1>
         </header>
         <div class="data-section">
           <div class="student-header-block">
@@ -859,100 +870,85 @@
             </div>
             <div class="student-meta-summary">
               <h3 id="p-student-name">-</h3>
-              <p style="font-size: 14px; color: var(--slate-500); font-weight: 600; margin-top: 6px;">
-                Roll ID: <span id="p-student-id">-</span>
-              </p>
+              <p style="color: var(--slate-500); font-weight: 600; margin-top: 4px;" id="p-student-id">-</p>
             </div>
           </div>
 
-          <div class="profile-card" style="margin-bottom: 30px;">
+          <div class="profile-card" style="margin-bottom: 40px;">
             <div class="info-tile">
-              <span>Section Class Unit</span>
+              <span>Section Class Room</span>
               <p id="p-class-name">-</p>
             </div>
             <div class="info-tile">
-              <span>Academic Course Track</span>
+              <span>Selected Course Track</span>
               <p id="p-course-name">-</p>
             </div>
             <div class="info-tile">
-              <span>Profile Status</span>
+              <span>Status</span>
               <p id="p-status">-</p>
             </div>
-          </div>
-
-          <div class="profile-card" style="margin-bottom: 30px;">
             <div class="info-tile">
-              <span>Date of Birth</span>
+              <span>Official Birthday</span>
               <p id="p-dob">-</p>
             </div>
             <div class="info-tile">
-              <span>Age Track</span>
+              <span>Age</span>
               <p id="p-age">-</p>
             </div>
             <div class="info-tile">
-              <span>Primary Phone</span>
+              <span>Primary Contact</span>
               <p id="p-primary">-</p>
             </div>
             <div class="info-tile">
-              <span>Secondary Phone</span>
+              <span>Secondary Contact</span>
               <p id="p-secondary">-</p>
             </div>
-          </div>
-
-          <div class="profile-card" style="margin-bottom: 30px;">
             <div class="info-tile">
-              <span>Previous Qualifications</span>
+              <span>10th Std / 12th Std %</span>
               <p id="p-marks">-</p>
             </div>
-            <div class="info-tile" style="grid-column: span 2;">
-              <span>Registered Accommodation Room</span>
+            <div class="info-tile">
+              <span>Accommodation Status</span>
               <p id="p-accommodation">-</p>
             </div>
-          </div>
-
-          <div class="profile-card" style="margin-bottom: 30px;">
-            <div class="info-tile" style="grid-column: span 3;">
-              <span>Registered Address</span>
+            <div class="info-tile" style="grid-column: span 2;">
+              <span>Residential Address</span>
               <p id="p-address">-</p>
             </div>
           </div>
-        </div>
 
-        <div class="data-section">
-          <h2>My Realtime Attendance Evaluation Status</h2>
-          <div class="profile-card" style="margin-top: 20px; margin-bottom: 30px;">
-            <div class="info-tile" style="border-left: 4px solid #0284c7;">
-              <span>Total Assigned Sessions</span>
-              <p id="p-total-days" style="font-size: 24px; font-weight: 800;">0</p>
+          <h2>Cumulative Metrics</h2>
+          <div class="profile-card" style="margin-top: 20px; margin-bottom: 40px;">
+            <div class="info-tile" style="border-left: 5px solid var(--sky-500);">
+              <span>Aggregated Tracking Slots</span>
+              <p id="p-total-days">-</p>
             </div>
-            <div class="info-tile" style="border-left: 4px solid #166534;">
-              <span>Sessions Present</span>
-              <p id="p-present-days" style="font-size: 24px; font-weight: 800;">0</p>
+            <div class="info-tile" style="border-left: 5px solid var(--emerald-600);">
+              <span>Present Records logged</span>
+              <p id="p-present-days">-</p>
             </div>
-            <div class="info-tile" style="border-left: 4px solid #991b1b;">
-              <span>Sessions Absent</span>
-              <p id="p-absent-days" style="font-size: 24px; font-weight: 800;">0</p>
+            <div class="info-tile" style="border-left: 5px solid var(--rose-600);">
+              <span>Absent Deficit logs</span>
+              <p id="p-absent-days">-</p>
             </div>
-            <div class="info-tile" style="border-left: 4px solid #8b5cf6;">
-              <span>Aggregate Percentage</span>
-              <p id="p-percentage" style="font-size: 24px; font-weight: 800;">100%</p>
+            <div class="info-tile" style="background: var(--slate-900); color: white;">
+              <span style="color: var(--slate-400);">Attendance Score Metric</span>
+              <p style="font-size: 28px; font-weight: 800; color: #38bdf8;" id="p-percentage">100.0%</p>
             </div>
           </div>
 
-          <h3>Daily Log Entry Logs</h3>
+          <h2>Attendance Tracking History Ledger</h2>
           <div class="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Logged Date</th>
-                  <th>Session Subject Period Hour</th>
-                  <th>Status Evaluation</th>
-                  <th>Faculty Instructor</th>
+                  <th>Track Date</th>
+                  <th>Subject Index</th>
+                  <th>Verification Status</th>
+                  <th>Verified Faculty</th>
                 </tr>
               </thead>
-              <tbody id="student-att-history-tbody">
-                <tr><td colspan="4">No historical attendance entry logs parsed.</td></tr>
-              </tbody>
+              <tbody id="student-att-history-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -961,28 +957,28 @@
     </main>
   </div>
 
-  <!-- Modal Timetable Popup Overlay -->
+  <!-- Dynamic Timetable Popup Modal Structure -->
   <div class="modal-overlay" id="timetable-popup-modal">
     <div class="modal-container">
       <div class="modal-header">
-        <h3>Class Timetable Console Matrix</h3>
+        <h3>Institutional Matrix Timetable Viewer</h3>
         <button class="modal-close-btn" onclick="closeTimetableModalPopup()">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
-          <label style="font-weight: 700; color: var(--slate-800);">Select Class Room Section:</label>
-          <select id="modal-tt-class-select" onchange="renderModalTimetableGrid()" style="padding: 10px; border-radius: 8px; border:1px solid #cbd5e1; outline:none;"></select>
+        <div class="form-field-group" style="margin-bottom: 20px; max-width: 300px;">
+          <label style="font-weight:700;">Select Target Sector Class</label>
+          <select id="modal-tt-class-select" onchange="renderModalTimetableGrid()"></select>
         </div>
-        <div class="tt-grid" id="modal-tt-runtime-grid">
-          <p style="grid-column: span 11; text-align: center; color: var(--slate-400); padding: 40px 0;">Please select a class room section parameter dynamically.</p>
+        <div class="tt-grid" id="modal-tt-runtime-grid" style="grid-template-columns: 140px repeat(10, minmax(130px, 1fr));">
+          <p style="grid-column: span 11; text-align: center; color: var(--slate-400); padding: 40px 0;">Please select a class from the dropdown above to display its timetable grid.</p>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="action-btn" onclick="closeTimetableModalPopup()" style="background: var(--slate-800);">Close Window</button>
+        <button class="action-btn" onclick="closeTimetableModalPopup()" style="background: var(--slate-700);">Close Window</button>
       </div>
     </div>
   </div>
 
-  <script src="./script.js"></script>
+  <script src="scripts.js"></script>
 </body>
 </html>
