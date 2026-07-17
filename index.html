@@ -714,25 +714,55 @@
         </div>
 
         <!-- Conditional Configure Container -->
-        <div class="data-section" id="tt-configure-block" style="display: none;">
-          <h2>Configure Matrix Period Allocation</h2>
-          <div class="form-grid-layout">
-            <div class="form-field-group">
-              <label>Target Sector Class *</label>
-              <select id="tt-class-select"></select>
-            </div>
-            <div class="form-field-group">
-              <label>Target Day Index *</label>
-              <select id="tt-day-select">
-                <option value="">-- Choose Target Day --</option>
-                <option value="MONDAY">MONDAY</option>
-                <option value="TUESDAY">TUESDAY</option>
-                <option value="WEDNESDAY">WEDNESDAY</option>
-                <option value="THURSDAY">THURSDAY</option>
-                <option value="FRIDAY">FRIDAY</option>
-              </select>
-            </div>
-          </div>
+        <!-- Conditional Configure Container (User Friendly Matrix Grid UI) -->
+<div class="data-section" id="tt-configure-block" style="display: none;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Configure Matrix Period Allocation</h2>
+    <div class="form-field-group" style="margin-bottom: 0; min-width: 250px;">
+      <label style="font-weight: 700;">Select Target Class *</label>
+      <select id="tt-class-select" onchange="renderSchedulerConfigGrid()"></select>
+    </div>
+  </div>
+
+  <p style="color: var(--slate-500); margin-bottom: 15px; font-size: 13px;">
+    💡 <strong>Tips:</strong> Grid-il ulla entha oru Period Cell-ai click seithum, atharkaana Subject matrum Staff-ai neenga sulabamaaga maatrikollalaam!
+  </p>
+
+  <!-- Interactive Grid Sheet -->
+  <div class="tt-grid" id="tt-scheduler-interactive-grid" style="grid-template-columns: 140px repeat(10, minmax(130px, 1fr)); margin-bottom: 30px;"></div>
+
+  <!-- Inline Floating Editor Panel -->
+  <div id="quick-cell-editor" style="display: none; background: #f8fafc; border: 2px solid var(--sky-600); border-radius: 8px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+    <h3 style="margin-top: 0; color: var(--slate-900); font-size: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+      ✏️ Edit Cell: <span id="editor-current-slot-info" style="color: var(--sky-600); font-weight: 800;">-</span>
+    </h3>
+    <input type="hidden" id="editor-target-day">
+    <input type="hidden" id="editor-target-hour">
+    
+    <div class="form-grid-layout" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+      <div class="form-field-group">
+        <label>Subject</label>
+        <select id="editor-sub-val"></select>
+      </div>
+      <div class="form-field-group">
+        <label>Primary Instructor</label>
+        <select id="editor-staff1-val"></select>
+      </div>
+      <div class="form-field-group">
+        <label>Co-Instructor A</label>
+        <select id="editor-staff2-val"></select>
+      </div>
+      <div class="form-field-group">
+        <label>Co-Instructor B</label>
+        <select id="editor-staff3-val"></select>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+      <button type="button" class="action-btn" onclick="closeQuickCellEditor()" style="background: var(--slate-500); height: auto; padding: 8px 16px;">Cancel</button>
+      <button type="button" class="action-btn" onclick="saveQuickCellChanges()" style="background: var(--emerald-600); height: auto; padding: 8px 16px;">Save Changes</button>
+    </div>
+  </div>
+</div>
 
           <!-- Dynamic 7 Periods Mapping Inputs with Multiple Staff Select Options -->
           <div id="tt-hours-dynamic-wrapper" style="margin-top: 30px; display: flex; flex-direction: column; gap: 16px;">
