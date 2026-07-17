@@ -1,11 +1,9 @@
 /* ==========================================================================
-   INSTITUTIONAL CORE SYSTEM ENGINE (MODULAR RUNTIME) - OPTIMIZED WITH STAFF CONFLICT RESOLUTIONS
+   INSTITUTIONAL CORE SYSTEM ENGINE (MODULAR RUNTIME) - OPTIMIZED WITH PHOTO UPLOADER
    ========================================================================== */
 
-// 1. DYNAMIC DEPLOYMENT CONFIGURATIONS
 const DEPLOYMENT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbziEkpaxaRIDOPGSptVsFb9DDpQHI4pj5iDwlwBdn2JmC782750cmzuA77v0rIBT7Xd/exec"; 
 
-// 2. RUNTIME DATABASE STATE SCHEMA
 const SYSTEM_SCHEMA = {
   MASTER_USERS: ["UID", "Name", "Password", "Role", "RecordID"],
   MASTER_COURSES: ["CourseCode", "CourseName", "Department", "RecordID"],
@@ -19,7 +17,6 @@ const SYSTEM_SCHEMA = {
   STUDENT_MARKS: ["StudentID", "SubjectCode", "CIA1", "CIA2", "CIA3", "Assignment", "Attendance", "Semester", "Total", "RecordID"]
 };
 
-// 3. INTERNAL RUNTIME MEMORY
 let activeUserSession = { role: "", uid: "", name: "" };
 let syncInProgressState = false;
 let editingRowIndices = {
@@ -35,13 +32,11 @@ let editingRowIndices = {
   STUDENT_MARKS: -1
 };
 
-// 4. ON SYSTEM LOAD INITIALIZER
 window.addEventListener("DOMContentLoaded", () => {
   initializeLocalDatabases();
   setupGlobalEvents();
   autoLoginIfSessionExists();
   
-  // Set today's date on date picker as default
   const datePicker = document.getElementById("att-date-picker");
   if (datePicker && !datePicker.value) {
     datePicker.value = new Date().toISOString().split('T')[0];
@@ -70,7 +65,6 @@ function setupGlobalEvents() {
       const targetSec = document.getElementById(targetSectionId);
       if(targetSec) targetSec.classList.add("active");
 
-      // Reset Matrix View mode screens visibility on section change
       if(targetSectionId === "timetable-creator-section") {
         const configureBlock = document.getElementById("tt-configure-block");
         const matrixBlock = document.getElementById("tt-matrix-block");
@@ -124,7 +118,21 @@ function toggleHostelFieldsVisibility() {
   });
 }
 
-// 4.5 NEW RUNTIME: TOGGLE TIMETABLE PLANNER MATRIX FORM BLOCK VIEWERS
+function handlePhotoUpload(inputNode) {
+  const file = inputNode.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64String = e.target.result;
+    document.getElementById("std-photo-hidden").value = base64String;
+    const previewBox = document.getElementById("photo-preview-box");
+    previewBox.innerHTML = `<img src="${base64String}" style="width:100%; height:100%; object-fit:cover;">`;
+    previewBox.style.display = "flex";
+  };
+  reader.readAsDataURL(file);
+}
+
 function toggleTimetablePlannerMode(workspaceMode) {
   const configPanel = document.getElementById("tt-configure-block");
   const matrixPanel = document.getElementById("tt-matrix-block");
@@ -140,7 +148,6 @@ function toggleTimetablePlannerMode(workspaceMode) {
   }
 }
 
-// 5. SECURE ENDPOINT SYNCHRONIZATION
 function setGlobalSyncState(status) {
   syncInProgressState = status;
   const syncBtn = document.getElementById("cloud-sync-btn");
@@ -213,12 +220,10 @@ async function syncWithGoogleSheet(sheetTab, payload, headers, action, recordId 
   }
 }
 
-// 5.5 MODIFIED ADMIN DASHBOARD COUNTERS RENDERER
 function renderAdminDashboardSummary() {
   const staff = JSON.parse(localStorage.getItem("MASTER_STAFFS")) || [];
   const students = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
 
-  // Calculate Dayscholar and Hosteler counts based on 'MASTER_STUDENTS' database
   let dayscholarCount = 0;
   let hostelerCount = 0;
   
@@ -258,7 +263,6 @@ function sheetTabForKey(key, optionalRowData = null) {
   return map[key] || "";
 }
 
-// 6. ROLE CONFIGURATION GATEWAY
 function handleSystemLogin() {
   const uid = document.getElementById("login-uid").value.trim();
   const pass = document.getElementById("login-pass").value.trim();
@@ -351,7 +355,6 @@ function handleLogout() {
   document.getElementById("main-content-area").style.display = "none";
 }
 
-// 7. DROPDOWN SELECTION BUILDERS
 function refreshFormDropdownLists() {
   const courseList = JSON.parse(localStorage.getItem("MASTER_COURSES")) || [];
   const classList = JSON.parse(localStorage.getItem("MASTER_CLASSES")) || [];
@@ -397,7 +400,6 @@ function populateSelectControl(elementId, dataset, valueColIndex, textColIndex, 
   });
 }
 
-// 8. CRUD SAVE GATEWAY & VALIDATION
 function handleFormSubmission(tblKey, inputControlIds, resetFormElementId = null) {
   let valuesMatrix = JSON.parse(localStorage.getItem(tblKey)) || [];
   let formValues = inputControlIds.map(id => {
@@ -437,7 +439,11 @@ function handleFormSubmission(tblKey, inputControlIds, resetFormElementId = null
 
   if (resetFormElementId) {
     document.getElementById(resetFormElementId).reset();
-    if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
+    if(tblKey === "MASTER_STUDENTS") {
+      toggleHostelFieldsVisibility();
+      document.getElementById("photo-preview-box").style.display = "none";
+      document.getElementById("photo-preview-box").innerHTML = "";
+    }
   }
 }
 
@@ -452,11 +458,20 @@ function handleUniversalEdit(tblKey, rowIdx, inputControlIds) {
     if (inputControl) inputControl.value = targetRow[idx] || "";
   });
 
-  if(tblKey === "MASTER_STUDENTS") toggleHostelFieldsVisibility();
+  if(tblKey === "MASTER_STUDENTS") {
+    toggleHostelFieldsVisibility();
+    const existingPhoto = targetRow[15];
+    const previewBox = document.getElementById("photo-preview-box");
+    if(existingPhoto) {
+      previewBox.innerHTML = `<img src="${existingPhoto}" style="width:100%; height:100%; object-fit:cover;">`;
+      previewBox.style.display = "flex";
+    } else {
+      previewBox.style.display = "none";
+    }
+  }
   alert("Row parameters successfully bound to UI editors! Edit and commit form.");
 }
 
-// 9. DYNAMIC GRID & TABLE RENDERERS
 function renderAllTables() {
   renderDatasetToTable("user-table-body", "MASTER_USERS", [0, 1, 3], ["UID", "Name", "Role"]);
   renderDatasetToTable("course-table-body", "MASTER_COURSES", [0, 1, 2], ["Course Code", "Course Name", "Dept"]);
@@ -541,13 +556,12 @@ function getInputIdsForTableKey(tblKey) {
     MASTER_SUBJECTS: ["sub-code", "sub-name", "sub-course-select", "sub-dept"],
     MASTER_STAFFS: ["stf-id", "stf-name", "stf-dept", "stf-contact"],
     MASTER_ALLOCATIONS: ["alloc-staff-select", "alloc-class-select", "alloc-sub-select"],
-    MASTER_STUDENTS: ["std-id", "std-name", "std-class-select", "std-course-select", "std-status", "std-dob", "std-age", "std-primary", "std-secondary", "std-10th", "std-12th", "std-accom", "std-hostel-name", "std-room", "std-address", "std-photo"],
+    MASTER_STUDENTS: ["std-id", "std-name", "std-class-select", "std-course-select", "std-status", "std-dob", "std-age", "std-primary", "std-secondary", "std-10th", "std-12th", "std-accom", "std-hostel-name", "std-room", "std-address", "std-photo-hidden"],
     CLASS_TIMETABLES: ["tt-class-select", "tt-day-select"]
   };
   return formsMapping[tblKey] || [];
 }
 
-// 10. TIMETABLE RUNTIME LAYOUT MATRIX BUILDER - 7 PERIOD CONFIGURATION SUPPORT
 function saveTimetableRecord() {
   const classId = document.getElementById("tt-class-select").value;
   const targetDay = document.getElementById("tt-day-select").value;
@@ -661,7 +675,6 @@ function createHeaderCell(text) {
   return cell;
 }
 
-// 10.5 TIMETABLE POPUP MODAL CONTROL LOGIC
 function openTimetableModalPopup() {
   const modal = document.getElementById("timetable-popup-modal");
   if (modal) {
@@ -748,7 +761,6 @@ function renderModalTimetableGrid() {
   });
 }
 
-// 11. STAFF WORKSPACE DASHBOARD RENDERER (OPTIMIZED WITH COMPLETED TRACKING)
 function renderStaffDashboardConsole() {
   const staffName = activeUserSession.name;
   const staffIdField = document.getElementById("stf-dash-id");
@@ -834,7 +846,6 @@ function renderStaffDashboardConsole() {
   });
 }
 
-// 12. DYNAMIC WORKSPACE ATTENDANCE MODULE
 let activeSelectedSubjectRuntime = "";
 let activeSelectedPeriodRuntime = "";
 
@@ -1119,7 +1130,6 @@ async function saveFacultyAttendanceRegister() {
   filterSubjectsByAssignedStaff();
 }
 
-// 13. STUDENT VIEW PORTAL ENGINE
 function renderStudentSelfProfileViewer() {
   const loggedStudentID = activeUserSession.uid;
   const studentsList = JSON.parse(localStorage.getItem("MASTER_STUDENTS")) || [];
@@ -1151,7 +1161,7 @@ function renderStudentSelfProfileViewer() {
 
   const photoFrame = document.getElementById("p-student-photo-frame");
   if (photoFrame && profile[15]) {
-    photoFrame.innerHTML = `<img src="${profile[15]}" alt="Profile Photo">`;
+    photoFrame.innerHTML = `<img src="${profile[15]}" alt="Profile Photo" style="width:100%; height:100%; object-fit:cover;">`;
   } else if (photoFrame) {
     photoFrame.innerHTML = `<i class="fas fa-user-graduate"></i>`;
   }
@@ -1182,7 +1192,6 @@ function renderStudentSelfProfileViewer() {
 
 function handleAttendanceCategoryToggle() {}
 
-// 14. NEW MODULE: DYNAMIC MARKS CALCULATION & PROCESSING ENGINE
 function filterSubjectsForMarksEntry() {
   const classId = document.getElementById("marks-class-select").value;
   const subjectSelect = document.getElementById("marks-subject-select");
