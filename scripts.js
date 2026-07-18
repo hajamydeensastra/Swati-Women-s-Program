@@ -310,7 +310,7 @@ function applyAuthorizationRules(role, name) {
     staffMenuOpts.forEach(el => el.style.display = "none"); 
     document.getElementById("student-menu-profile").style.display = "none";
     if (adminAttType) adminAttType.style.display = "flex"; 
-    document.getElementById("mode-flag-badge").innerText = "ADMINISTRATION INSTANCE";
+    document.getElementById("mode-flag-badge").innerText = "ADMIN PORTAL";
     triggerNavigationTabChange("dashboard-section");
   } else if (role === "STAFF") {
     adminMenuOpts.forEach(el => el.style.display = "none");
@@ -324,7 +324,7 @@ function applyAuthorizationRules(role, name) {
     adminMenuOpts.forEach(el => el.style.display = "none");
     staffMenuOpts.forEach(el => el.style.display = "none");
     document.getElementById("student-menu-profile").style.display = "flex";
-    document.getElementById("mode-flag-badge").innerText = "STUDENT COUNSEL PORTAL";
+    document.getElementById("mode-flag-badge").innerText = "STUDENT PORTAL";
     triggerNavigationTabChange("student-profile-section");
     renderStudentSelfProfileViewer();
   }
